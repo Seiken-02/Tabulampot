@@ -18,7 +18,7 @@
 
 Pemilik tabulampot sering lupa jadwal penyiraman, terlambat memupuk, dan tidak punya catatan riwayat perawatan tanaman — akibatnya pertumbuhan tanaman kurang optimal.
 
-**Tabulampot Tracker** membantu mencatat aktivitas perawatan tanaman secara digital dan menghitung jadwal perawatan berikutnya secara otomatis, berdasarkan jenis tanaman dan riwayat aktivitas terakhir.
+**Tabulampot ** membantu mencatat aktivitas perawatan tanaman secara digital dan menghitung jadwal perawatan berikutnya secara otomatis, berdasarkan jenis tanaman dan riwayat aktivitas terakhir.
 
 > 📅 Fitur kalender perawatan visual bersifat **opsional**, akan ditambahkan menyesuaikan progress.
 
@@ -28,8 +28,8 @@ Pemilik tabulampot sering lupa jadwal penyiraman, terlambat memupuk, dan tidak p
 
 | Nama | Peran | Tugas |
 |---|---|---|
-| Andreas | Frontend | UI/UX, komponen SvelteKit, integrasi API |
-| _`[Nama Partner]`_ | Backend | REST API, database, autentikasi (JWT & bcrypt) |
+| Andreas Fiki Darmawan| Frontend | UI/UX, komponen SvelteKit, integrasi API |
+| Panji Cahya prasetyo| Backend | REST API, database, autentikasi (JWT & bcrypt) |
 
 ---
 
