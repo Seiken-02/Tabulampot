@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🌱 Tabulampot Tracker
+# 🌱 Tabulampot
 
 **Aplikasi Monitoring dan Manajemen Perawatan Tanaman Buah dalam Pot**
 
