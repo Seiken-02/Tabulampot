@@ -18,7 +18,7 @@
 
 Pemilik tabulampot sering lupa jadwal penyiraman, terlambat memupuk, dan tidak punya catatan riwayat perawatan tanaman — akibatnya pertumbuhan tanaman kurang optimal.
 
-**Tabulampot ** membantu mencatat aktivitas perawatan tanaman secara digital dan menghitung jadwal perawatan berikutnya secara otomatis, berdasarkan jenis tanaman dan riwayat aktivitas terakhir.
+**Tabulampot** membantu mencatat aktivitas perawatan tanaman secara digital dan menghitung jadwal perawatan berikutnya secara otomatis, berdasarkan jenis tanaman dan riwayat aktivitas terakhir.
 
 > 📅 Fitur kalender perawatan visual bersifat **opsional**, akan ditambahkan menyesuaikan progress.
 
