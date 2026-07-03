@@ -82,7 +82,7 @@ users
 | `POST` | `/plants/:id/fertilize` | `TODO` | `TODO` |
 | `GET` | `/plants/:id/history` | – | `TODO` |
 
-<!-- 🔧 PLACEHOLDER: isi kolom Payload Body & Format Respons begitu endpoint backend selesai diimplementasi -->
+![alt text](TAMBULAPOT-1.png)
 
 ---
 
