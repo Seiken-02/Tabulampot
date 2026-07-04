@@ -62,8 +62,7 @@ users
 | `plants` | Tanaman milik pengguna |
 | `activity_logs` | Riwayat aktivitas per tanaman — dibedakan lewat kolom `activity_type` (`watering` / `fertilizing`) |
 
-<!-- 🔧 PLACEHOLDER: tempel diagram ERD atau detail kolom tiap tabel di sini setelah skema final -->
-
+![alt text](TAMBULAMPOT.png)
 ---
 
 ## 🔌 Dokumentasi API
@@ -82,7 +81,7 @@ users
 | `POST` | `/plants/:id/fertilize` | `TODO` | `TODO` |
 | `GET` | `/plants/:id/history` | – | `TODO` |
 
-![alt text](TAMBULAPOT-1.png)
+<!-- 🔧 PLACEHOLDER: isi kolom Payload Body & Format Respons begitu endpoint backend selesai diimplementasi -->
 
 ---
 
