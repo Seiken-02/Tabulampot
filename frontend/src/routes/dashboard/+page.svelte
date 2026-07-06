@@ -40,9 +40,9 @@
 	}
 
 	const aktivitasTerbaru = [
-		{ id: 1, name: 'Jeruk Nipis', type: 'siram' as const, waktu: '2 jam lalu', status: 'Mendesak' },
-		{ id: 2, name: 'Mangga Harum', type: 'siram' as const, waktu: 'Hari ini, 08.00', status: 'Selesai' },
-		{ id: 3, name: 'Jambu Kristal', type: 'pupuk' as const, waktu: 'Kemarin', status: 'Selesai' }
+		{ id: 1, name: 'Jeruk Nipis', type: 'siram' as const,  status: 'Mendesak' },
+		{ id: 2, name: 'Mangga Harum', type: 'siram' as const,  status: 'Selesai' },
+		{ id: 3, name: 'Jambu Kristal', type: 'pupuk' as const,  status: 'Selesai' }
 	];
 </script>
 
@@ -116,7 +116,7 @@
 					</span>
 					<div class="flex-1 min-w-0">
 						<p class="font-medium text-sm truncate">{item.name}</p>
-						<p class="text-xs text-gray-500">{item.waktu}</p>
+
 					</div>
 					<Badge 
 						text={item.status} 

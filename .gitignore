@@ -1,0 +1,14 @@
+# Semua node_modules
+**/node_modules/
+
+# Environment
+**/.env
+**/.env.*
+
+# Build
+**/.svelte-kit/
+**/build/
+**/dist/
+
+# Logs
+*.log
