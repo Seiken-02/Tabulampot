@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-
+	
+	import { goto } from '$app/navigation';
 	import Card from '$lib/components/ui/Card.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -11,6 +12,8 @@
 	function handleLogin() {
 		console.log('Email:', email);
 		console.log('Password:', password);
+		// TODO: ganti dengan pemanggilan API login yang sebenarnya
+		goto(resolve('/dashboard'));
 	}
 </script>
 

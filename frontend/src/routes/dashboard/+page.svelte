@@ -98,7 +98,7 @@
 		<div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-4 pt-3 border-t border-gray-100 text-[10px] text-gray-500">
 			<span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-primary"></span> Perlu disiram</span>
 			<span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-accent"></span> Perlu dipupuk</span>
-			<span class="flex items-center gap-1">🌧️ Hujan (siram di-skip)</span>
+			<span class="flex items-center gap-1">🌧️ Hujan </span>
 		</div>
 	</Card>
 
@@ -127,4 +127,4 @@
 		{/each}
 	</div>
 
-</div>
+</div>>
