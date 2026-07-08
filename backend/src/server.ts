@@ -1,17 +1,10 @@
-import express from "express";
-import dotenv from "dotenv";
-
-dotenv.config();
-
-const app = express();
-
-app.use(express.json());
-
-app.get("/", (req, res) => {
-  res.send("Tabulampot Backend Running");
-});
+import app from "./app";
 
 const PORT = process.env.PORT || 3000;
+
+app.get("/", (_, res) => {
+  res.send("Backend Tabulampot Running");
+});
 
 app.listen(PORT, () => {
   console.log(`Server berjalan di port ${PORT}`);

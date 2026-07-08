@@ -1,88 +1,76 @@
 import {
-  pgTable,
+  mysqlTable,
   serial,
   varchar,
   text,
-  integer,
+  int,
   timestamp,
   date,
-} from "drizzle-orm/pg-core";
+  mysqlEnum,
+  datetime,
+} from "drizzle-orm/mysql-core";
 
-export const users = pgTable("users", {
+export const users = mysqlTable("users", {
   id: serial("id").primaryKey(),
 
   name: varchar("name", { length: 100 }).notNull(),
 
-  email: varchar("email", { length: 100 }).notNull().unique(),
+  email: varchar("email", { length: 100 }).notNull(),
 
-  password: text("password").notNull(),
+  password: varchar("password", { length: 255 }).notNull(),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const plantTypes = mysqlTable("plant_types", {
+  id: serial("id").primaryKey(),
+
+  name: varchar("name", { length: 100 }).notNull(),
+
+  wateringInterval: int("watering_interval").notNull(),
+
+  fertilizingInterval: int("fertilizing_interval").notNull(),
+
+  description: text("description"),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const plantTypes = pgTable("plant_types", {
+export const plants = mysqlTable("plants", {
   id: serial("id").primaryKey(),
 
-  name: varchar("name", { length: 100 }).notNull(),
+  userId: int("user_id").notNull(),
 
-  waterIntervalDays: integer("water_interval_days").notNull(),
+  plantTypeId: int("plant_type_id").notNull(),
 
-  fertilizerIntervalDays: integer(
-    "fertilizer_interval_days"
-  ).notNull(),
+  nickname: varchar("nickname", { length: 100 }).notNull(),
 
-  recommendedFertilizer: varchar(
-    "recommended_fertilizer",
-    { length: 100 }
-  ),
+  plantingDate: date("planting_date"),
 
-  description: text("description"),
-});
-
-export const plants = pgTable("plants", {
-  id: serial("id").primaryKey(),
-
-  userId: integer("user_id")
-    .references(() => users.id)
-    .notNull(),
-
-  plantTypeId: integer("plant_type_id")
-    .references(() => plantTypes.id)
-    .notNull(),
-
-  nickname: varchar("nickname", {
-    length: 100,
-  }).notNull(),
-
-  plantingDate: date("planting_date").notNull(),
-
-  photoUrl: text("photo_url"),
-});
-
-export const wateringLogs = pgTable("watering_logs", {
-  id: serial("id").primaryKey(),
-
-  plantId: integer("plant_id")
-    .references(() => plants.id)
-    .notNull(),
-
-  wateredAt: timestamp("watered_at")
-    .defaultNow()
-    .notNull(),
+  location: varchar("location", { length: 100 }),
 
   notes: text("notes"),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const fertilizerLogs = pgTable("fertilizer_logs", {
+export const activityLogs = mysqlTable("activity_logs", {
   id: serial("id").primaryKey(),
 
-  plantId: integer("plant_id")
-    .references(() => plants.id)
-    .notNull(),
+  plantId: int("plant_id").notNull(),
 
-  fertilizedAt: timestamp("fertilized_at")
-    .defaultNow()
-    .notNull(),
+  activityType: mysqlEnum("activity_type", [
+    "watering",
+    "fertilizing",
+  ]).notNull(),
+
+  activityDate: datetime("activity_date").notNull(),
 
   notes: text("notes"),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
