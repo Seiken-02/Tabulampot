@@ -18,8 +18,7 @@
 		]
 	};
 
-	// Kalender statis: langsung hardcode buat bulan Juni 2026 (30 hari, tanggal 1 jatuh di hari Senin)
-	// null = slot kosong sebelum tanggal 1
+	// Kalender statis
 	const namaBulan = 'Juni 2026';
 	const days: (number | null)[] = [null, 1, 2, 3, 4, 5, 6, ...Array.from({ length: 24 }, (_, i) => i + 7)];
 
@@ -27,8 +26,7 @@
 	const plantedDay = 3;
 	const todayDay = 20;
 
-	// Set siram & pupuk diambil langsung dari tanggal di history (tetap dinamis dari data,
-	// tapi tidak lagi bergantung ke bulan yang sedang dilihat karena bulannya statis)
+	// Set siram & pupuk 
 	const siramDays = new Set(
 		plant.history.filter((h) => h.type === 'siram').map((h) => new Date(h.date).getDate())
 	);
@@ -76,7 +74,7 @@
 		</div>
 	</Card>
 
-	<!-- Judul bulan statis, tanpa tombol navigasi -->
+	<!-- Judul bulan statis -->
 	<div class="flex items-center justify-center mt-6 mb-2">
 		<h2 class="text-sm font-semibold text-gray-700 capitalize">{namaBulan}</h2>
 	</div>
@@ -101,7 +99,7 @@
 							{day}
 						</span>
 
-						<!-- Titik penanda kecil di bawah angka: tanam / siram / pupuk -->
+						<!-- Titik penanda kecil -->
 						<div class="flex items-center gap-0.5 h-2">
 							{#if day === plantedDay}
 								<span class="text-[9px] leading-none">🌱</span>
