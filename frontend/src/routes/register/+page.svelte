@@ -3,17 +3,32 @@
 	import Card from '$lib/components/ui/Card.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import { registerUser } from '$lib/api/auth';
+	import { goto } from '$app/navigation';
 
-	
+
+	let isLoading = $state(false);
+	let errorMessage = $state('');
+
 	let nama = $state('');
 	let email = $state('');
 	let password = $state('');
 
-	function handleRegister() {
-		console.log('Nama:', nama);
-		console.log('Email:', email);
-		console.log('Password:', password);
+	async function handleRegister() {
+		errorMessage = '';
+		isLoading = true;
+		try {
+			await registerUser({ name: nama, email, password });
+			goto(resolve('/login'));
+		} catch (err) {
+			errorMessage = err instanceof Error ? err.message : 'Registrasi gagal';
+		} finally {
+			isLoading = false;
+		}
 	}
+	
+
+
 </script>
 
 <div class="page">
@@ -29,8 +44,16 @@
 		<div class="field">
 			<Input label="Password" type="password" placeholder="••••••••" bind:value={password} />
 		</div>
-
-		<Button variant="primary" onclick={handleRegister} class="submit-btn">Daftar</Button>
+		
+		{#if errorMessage}
+			<p style="color: var(--color-danger-dark); font-size: 0.75rem; margin-bottom: 0.75rem;">
+				{errorMessage}
+			</p>
+		{/if}
+		
+		<Button variant="primary" onclick={handleRegister} class="w-full flex items-center justify-center">
+			{isLoading ? 'Memproses...' : 'Daftar'}
+		</Button>
 
 		<p class="footer-text">
 			Sudah punya akun? <a href={resolve('/login')} class="link">Masuk</a>

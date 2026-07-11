@@ -4,16 +4,29 @@
 	import Card from '$lib/components/ui/Card.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import { loginUser } from '$lib/api/auth';
+	import { setToken } from '$lib/stores/auth.svelte';
 
+	let isLoading = $state(false);
+	let errorMessage = $state('');
 	let email = $state('');
 	let password = $state('');
-
-	function handleLogin() {
-		console.log('Email:', email);
-		console.log('Password:', password);
-		// TODO: ganti dengan pemanggilan API login yang sebenarnya
+	async function handleLogin() {
+	errorMessage = '';
+	isLoading = true;
+	try {
+		const result = await loginUser({ email, password });
+		setToken(result.token);
 		goto(resolve('/dashboard'));
+	} catch (err) {
+		errorMessage = err instanceof Error ? err.message : 'Login gagal';
+	} finally {
+		isLoading = false;
 	}
+}
+
+	
+
 </script>
 
 <div class="page">
@@ -26,8 +39,14 @@
 		<div class="field">
 			<Input label="Password" type="password" placeholder="••••••••" bind:value={password} />
 		</div>
-
-		<Button variant="primary" onclick={handleLogin} class="submit-btn">Masuk</Button>
+		{#if errorMessage}
+			<p style="color: var(--color-danger-dark); font-size: 0.75rem; margin-bottom: 0.75rem;">
+				{errorMessage}
+			</p>
+		{/if}
+		<Button variant="primary" onclick={handleLogin} class="w-full flex items-center justify-center">
+			{isLoading ? 'Memproses...' : 'Masuk'}
+		</Button>
 
 		<p class="footer-text">
 			belum punya akun? <a href={resolve('/register')} class="link">Daftar</a>
