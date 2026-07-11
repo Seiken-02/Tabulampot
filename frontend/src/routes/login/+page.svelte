@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	
 	import { goto } from '$app/navigation';
 	import Card from '$lib/components/ui/Card.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
@@ -17,18 +16,59 @@
 	}
 </script>
 
-<div class="min-h-screen flex items-center justify-center bg-surface">
+<div class="page">
 	<Card>
-		<h1 class="text-lg font-bold text-primary-dark mb-4 text-center">Tabulampot</h1>
+		<h1 class="title">Tabulampot</h1>
 
-		<Input label="Email" type="email" placeholder="nama@email.com" bind:value={email} />
-		<Input label="Password" type="password" placeholder="••••••••" bind:value={password} />
+		<div class="field">
+			<Input label="Email" type="email" placeholder="nama@email.com" bind:value={email} />
+		</div>
+		<div class="field">
+			<Input label="Password" type="password" placeholder="••••••••" bind:value={password} />
+		</div>
 
-		<Button variant="primary" onclick={handleLogin} >Masuk</Button>
+		<Button variant="primary" onclick={handleLogin} class="submit-btn">Masuk</Button>
 
-		<p class="text-xs text-center text-gray-500 mt-3">
-			belum punya akun? <a href={resolve('/register')} class="text-primary">Daftar</a>
-
+		<p class="footer-text">
+			belum punya akun? <a href={resolve('/register')} class="link">Daftar</a>
 		</p>
 	</Card>
 </div>
+
+<style>
+	.page {
+		min-height: 100vh;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background-color: var(--color-surface);
+	}
+
+	.title {
+		font-size: 1.125rem;
+		font-weight: 700;
+		color: var(--color-primary-dark);
+		margin-bottom: 1rem;
+		text-align: center;
+	}
+
+	.field {
+		margin-bottom: 0.75rem;
+	}
+
+	:global(.submit-btn) {
+		width: 100%;
+		margin-top: 0.25rem;
+	}
+
+	.footer-text {
+		font-size: 0.75rem;
+		text-align: center;
+		color: var(--color-text-muted);
+		margin-top: 0.75rem;
+	}
+
+	.link {
+		color: var(--color-primary);
+	}
+</style>

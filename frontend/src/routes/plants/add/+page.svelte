@@ -7,43 +7,180 @@
 	import Select from '$lib/components/ui/Select.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 
+	interface PlantTypeOption {
+		value: string;
+		label: string;
+	}
+
 	let name = $state('');
-	let plantType = $state('mangga');
+	let plantType = $state('');
 	let plantedAt = $state('');
 
-	const plantTypeOptions = [
-		{ value: 'mangga', label: 'Mangga' },
-		{ value: 'jeruk', label: 'Jeruk' },
-		{ value: 'jambu', label: 'Jambu' }
-	];
+	let plantTypeOptions = $state<PlantTypeOption[]>([]);
+	let isLoadingTypes = $state(true);
+	let loadError = $state('');
 
-	function handleSubmit() {
-		console.log('Nama:', name);
-		console.log('Jenis:', plantType);
-		console.log('Tanggal tanam:', plantedAt);
-		goto(resolve('/plants'));
+	let isSubmitting = $state(false);
+	let submitError = $state('');
+
+	$effect(() => {
+		loadPlantTypes();
+	});
+
+	async function loadPlantTypes() {
+		isLoadingTypes = true;
+		loadError = '';
+
+		try {
+			// TODO:endpoint ini akan diganti dengan backend
+			const res = await fetch('/api/plant-types');
+
+			if (!res.ok) {
+				throw new Error(`Gagal memuat jenis tanaman (${res.status})`);
+			}
+
+			plantTypeOptions = await res.json();
+
+			// Set default pilihan ke opsi pertama begitu data datang
+			if (plantTypeOptions.length > 0) {
+				plantType = plantTypeOptions[0].value;
+			}
+		} catch (err) {
+			loadError = err instanceof Error ? err.message : 'Gagal memuat jenis tanaman.';
+		} finally {
+			isLoadingTypes = false;
+		}
+	}
+
+	async function handleSubmit() {
+		if (!name || !plantType || !plantedAt) {
+			submitError = 'Semua field wajib diisi.';
+			return;
+		}
+
+		isSubmitting = true;
+		submitError = '';
+
+		try {
+			// TODO: sesuaikan endpoint & body dengan backend
+			const res = await fetch('/api/plants', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					name,
+					plant_type: plantType,
+					planted_at: plantedAt
+				})
+			});
+
+			if (!res.ok) {
+				throw new Error(`Gagal menyimpan tanaman (${res.status})`);
+			}
+
+			goto(resolve('/plants'));
+		} catch (err) {
+			submitError = err instanceof Error ? err.message : 'Gagal menyimpan tanaman.';
+		} finally {
+			isSubmitting = false;
+		}
 	}
 </script>
 
 <Navbar />
 
-<div class="p-4 max-w-md mx-auto">
+<div class="page">
 	<Card>
-		<h1 class="text-lg font-bold text-primary-dark mb-4">Tambah Tanaman</h1>
+		<h1 class="title">Tambah Tanaman</h1>
 
-		<Input label="Nama tanaman" placeholder="mis. Mangga Harum" bind:value={name} />
-		<Select label="Jenis tanaman" options={plantTypeOptions} bind:value={plantType} />
-		<Input label="Tanggal tanam" type="date" bind:value={plantedAt} />
+		<div class="field">
+			<Input label="Nama tanaman" placeholder="mis. Mangga Harum" bind:value={name} />
+		</div>
 
-		<div class="bg-primary-light rounded-lg p-3 my-4 flex gap-2 items-start">
-			<span class="text-sm">ℹ️</span>
-			<p class="text-xs text-primary-dark">
+		<div class="field">
+			<Select
+				label="Jenis tanaman"
+				options={isLoadingTypes ? [{ value: '', label: 'Memuat...' }] : plantTypeOptions}
+				bind:value={plantType}
+				disabled={isLoadingTypes || plantTypeOptions.length === 0}
+			/>
+			{#if loadError}
+				<p class="field-error">{loadError}</p>
+			{/if}
+		</div>
+
+		<div class="field">
+			<Input label="Tanggal tanam" type="date" bind:value={plantedAt} />
+		</div>
+
+		<div class="info-box">
+			<span class="info-icon">ℹ️</span>
+			<p class="info-text">
 				Jadwal siram & pupuk dihitung otomatis dari jenis tanaman.
 			</p>
 		</div>
 
-		<Button variant="primary" onclick={handleSubmit} class="w-full flex items-center justify-center">
-			Simpan tanaman
+		{#if submitError}
+			<p class="field-error">{submitError}</p>
+		{/if}
+
+		<Button
+			variant="primary"
+			onclick={handleSubmit}
+			disabled={isLoadingTypes || isSubmitting}
+			class="submit-btn"
+		>
+			{isSubmitting ? 'Menyimpan...' : 'Simpan tanaman'}
 		</Button>
 	</Card>
 </div>
+
+<style>
+	.page {
+		padding: 1rem;
+		max-width: 28rem;
+		margin: 0 auto;
+	}
+
+	.title {
+		font-size: 1.125rem;
+		font-weight: 700;
+		color: var(--color-primary-dark);
+		margin-bottom: 1rem;
+	}
+
+	.field {
+		margin-bottom: 0.75rem;
+	}
+
+	.field-error {
+		font-size: 0.75rem;
+		color: var(--color-danger-dark);
+		margin-top: 0.25rem;
+	}
+
+	.info-box {
+		background-color: var(--color-primary-light);
+		border-radius: var(--radius-md);
+		padding: 0.75rem;
+		margin: 1rem 0;
+		display: flex;
+		align-items: flex-start;
+		gap: 0.5rem;
+	}
+
+	.info-icon {
+		font-size: 0.875rem;
+	}
+
+	.info-text {
+		font-size: 0.75rem;
+		color: var(--color-primary-dark);
+	}
+
+	:global(.submit-btn) {
+		width: 100%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+</style>

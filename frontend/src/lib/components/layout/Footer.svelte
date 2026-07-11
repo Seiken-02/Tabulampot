@@ -1,20 +1,49 @@
 <script lang="ts">
-	import { resolve } from '$app/paths';
+
 </script>
 
-<footer class="border-t border-gray-100 mt-12">
-	<div class="max-w-5xl mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-between gap-4">
-		<div class="flex items-center gap-2">
-			<span class="font-bold text-primary-dark">Tabulampot</span>
-		</div>
-
-		<div class="flex items-center gap-6 text-sm text-gray-500">
-			<a href={resolve('/login')} class="hover:text-primary">Masuk</a>
-			<a href={resolve('/register')} class="hover:text-primary">Daftar</a>
-		</div>
-
-		<p class="text-xs text-gray-400">
-			© 2026 Tabulampot
-		</p>
+<footer class="footer">
+	<div class="footer-inner">
+		<span class="brand-name">🌿 Tabulampot</span>
+		<p class="copyright">© 2026 Tabulampot. Dibuat untuk pekebun rumahan.</p>
 	</div>
 </footer>
+
+<style>
+	.footer {
+		border-top: 1px solid var(--color-surface-muted);
+		background-color: var(--color-surface);
+		margin-top: 4rem;
+	}
+
+	.footer-inner {
+		max-width: 64rem;
+		margin: 0 auto;
+		padding: 2rem 1.5rem;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.5rem;
+		text-align: center;
+	}
+
+	.brand-name {
+		font-weight: 700;
+		color: var(--color-primary-dark);
+		font-size: 1rem;
+	}
+
+	.copyright {
+		font-size: 0.75rem;
+		color: var(--color-text-muted);
+	}
+
+	/* Setara md: breakpoint Tailwind (768px) */
+	@media (min-width: 768px) {
+		.footer-inner {
+			flex-direction: row;
+			justify-content: space-between;
+			text-align: left;
+		}
+	}
+</style>

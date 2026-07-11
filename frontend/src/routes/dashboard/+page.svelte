@@ -2,20 +2,24 @@
 	import Navbar from '$lib/components/layout/Navbar.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
+	import Calendar from '$lib/components/ui/Calender.svelte';
 
-	const userName = 'Andreas';
-	const cuaca = { suhu: 29, kondisi: 'Cerah Berawan', icon: '⛅' };
+	// TODO: 
+	// (+page.server.ts) yang fetch dari activity_logs, plant_types, dan API cuaca.
+	interface DashboardData {
+		userName: string;
+		cuaca: { suhu: number; kondisi: string; icon: string };
+		tanggalSiram: number[];
+		tanggalPupuk: number[];
+		tanggalHujan: number[];
+		aktivitasTerbaru: { id: number; name: string; type: 'siram' | 'pupuk'; status: string }[];
+	}
+
+	let { data }: { data: DashboardData } = $props();
 
 	const today = new Date();
 	const hariIni = today.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
 	const namaBulan = today.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
-
-	// Dummy - nanti dihitung dari activity_logs & interval plant_types
-	const tanggalSiram = [3, 5, 10, 12, 18, 22];
-	const tanggalPupuk = [7, 12, 20, 28];
-
-	// Dummy - nanti diganti hasil fetch API cuaca
-	const tanggalHujan = [5, 18];
 
 	const year = today.getFullYear();
 	const month = today.getMonth();
@@ -30,101 +34,189 @@
 	});
 
 	function isHujan(day: number) {
-		return tanggalHujan.includes(day);
-	}
-	function showSiram(day: number) {
-		return tanggalSiram.includes(day) && !isHujan(day);
-	}
-	function showPupuk(day: number) {
-		return tanggalPupuk.includes(day);
+		return data.tanggalHujan.includes(day);
 	}
 
-	const aktivitasTerbaru = [
-		{ id: 1, name: 'Jeruk Nipis', type: 'siram' as const,  status: 'Mendesak' },
-		{ id: 2, name: 'Mangga Harum', type: 'siram' as const,  status: 'Selesai' },
-		{ id: 3, name: 'Jambu Kristal', type: 'pupuk' as const,  status: 'Selesai' }
-	];
+	// Diberikan ke <Calendar> untuk nentuin titik & ikon tiap tanggal
+	function getMarkers(day: number) {
+		const dots: ('primary' | 'accent')[] = [];
+		if (data.tanggalSiram.includes(day) && !isHujan(day)) dots.push('primary');
+		if (data.tanggalPupuk.includes(day)) dots.push('accent');
+		return { dots, emoji: isHujan(day) ? '🌧️' : undefined };
+	}
 </script>
 
-<Navbar  />
+<Navbar />
 
-<div class="p-4 max-w-md mx-auto">
-
-	<div class="mb-4">
-		<p class="text-lg font-bold text-primary-dark">Halo, {userName} 👋</p>
-		<p class="text-xs text-gray-500 capitalize">{hariIni}</p>
+<div class="page">
+	<div class="greeting">
+		<p class="greeting-name">Halo, {data.userName} 👋</p>
+		<p class="greeting-date">{hariIni}</p>
 	</div>
 
 	<Card>
-		<div class="flex items-center gap-3">
-			<span class="text-3xl">{cuaca.icon}</span>
+		<div class="weather">
+			<span class="weather-icon">{data.cuaca.icon}</span>
 			<div>
-				<p class="text-lg font-bold">{cuaca.suhu}°C</p>
-				<p class="text-xs text-gray-500">{cuaca.kondisi}</p>
+				<p class="weather-temp">{data.cuaca.suhu}°C</p>
+				<p class="weather-desc">{data.cuaca.kondisi}</p>
 			</div>
 		</div>
 	</Card>
 
-	<h2 class="text-sm font-semibold text-gray-700 capitalize mt-6 mb-2">{namaBulan}</h2>
-	<Card>
-		<div class="grid grid-cols-7 gap-y-2 text-center text-xs text-gray-400 mb-1">
-			<span>M</span><span>S</span><span>S</span><span>R</span><span>K</span><span>J</span><span>S</span>
-		</div>
-		<div class="grid grid-cols-7 gap-y-2 text-center text-sm">
-			{#each calendarDays as day, i (i)}
-				{#if day === null}
-					<div></div>
-				{:else}
-					<div class="flex flex-col items-center gap-1">
-						<span class="w-7 h-7 flex items-center justify-center rounded-full {day === today.getDate() ? 'bg-primary text-white font-medium' : ''}">
-							{day}
-						</span>
-						<div class="flex items-center gap-0.5 h-2">
-							{#if showSiram(day)}
-								<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
-							{/if}
-							{#if showPupuk(day)}
-								<span class="w-1.5 h-1.5 rounded-full bg-accent"></span>
-							{/if}
-							{#if isHujan(day)}
-								<span class="text-[9px] leading-none">🌧️</span>
-							{/if}
-						</div>
-					</div>
-				{/if}
-			{/each}
-		</div>
+	<Calendar {namaBulan} days={calendarDays} filledDay={today.getDate()} {getMarkers}>
+		{#snippet legend()}
+			<span class="legend-item"><span class="legend-dot primary"></span> Perlu disiram</span>
+			<span class="legend-item"><span class="legend-dot accent"></span> Perlu dipupuk</span>
+			<span class="legend-item">🌧️ Hujan</span>
+		{/snippet}
+	</Calendar>
 
-		<div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-4 pt-3 border-t border-gray-100 text-[10px] text-gray-500">
-			<span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-primary"></span> Perlu disiram</span>
-			<span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-accent"></span> Perlu dipupuk</span>
-			<span class="flex items-center gap-1">🌧️ Hujan </span>
-		</div>
-	</Card>
-
-	<div class="flex items-center justify-between mt-6 mb-2">
-		<h2 class="text-sm font-semibold text-gray-700">Aktivitas Terbaru</h2>
-		<span class="text-[10px] text-gray-400">Update tiap hari</span>
+	<div class="activity-header">
+		<h2 class="section-title">Aktivitas Terbaru</h2>
+		<span class="section-hint">Update tiap hari</span>
 	</div>
 
-	<div class="flex flex-col gap-3">
-		{#each aktivitasTerbaru as item (item.id)}
+	<div class="activity-list">
+		{#each data.aktivitasTerbaru as item (item.id)}
 			<Card>
-				<div class="flex items-center gap-3">
-					<span class="w-9 h-9 rounded-full flex items-center justify-center text-sm shrink-0 {item.type === 'siram' ? 'bg-primary-light' : 'bg-accent-soft'}">
+				<div class="activity-row">
+					<span class="activity-icon {item.type}">
 						{item.type === 'siram' ? '💧' : '🌱'}
 					</span>
-					<div class="flex-1 min-w-0">
-						<p class="font-medium text-sm truncate">{item.name}</p>
-
+					<div class="activity-info">
+						<p class="activity-name">{item.name}</p>
 					</div>
-					<Badge 
-						text={item.status} 
-						variant={item.status === 'Mendesak' ? 'danger' : 'success'} 
-					/>
+					<Badge text={item.status} variant={item.status === 'Mendesak' ? 'danger' : 'success'} />
 				</div>
 			</Card>
 		{/each}
 	</div>
+</div>
 
-</div>>
+<style>
+	.page {
+		padding: 1rem;
+		max-width: 28rem;
+		margin: 0 auto;
+	}
+
+	.greeting {
+		margin-bottom: 1rem;
+	}
+
+	.greeting-name {
+		font-size: 1.125rem;
+		font-weight: 700;
+		color: var(--color-primary-dark);
+	}
+
+	.greeting-date {
+		font-size: 0.75rem;
+		color: var(--color-text-muted);
+		text-transform: capitalize;
+	}
+
+	.weather {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+	}
+
+	.weather-icon {
+		font-size: 1.875rem;
+	}
+
+	.weather-temp {
+		font-size: 1.125rem;
+		font-weight: 700;
+	}
+
+	.weather-desc {
+		font-size: 0.75rem;
+		color: var(--color-text-muted);
+	}
+
+	.activity-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-top: 1.5rem;
+		margin-bottom: 0.5rem;
+	}
+
+	.section-title {
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: var(--color-text);
+	}
+
+	.section-hint {
+		font-size: 10px;
+		color: var(--color-text-muted);
+	}
+
+	.activity-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.activity-row {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+	}
+
+	.activity-icon {
+		width: 2.25rem;
+		height: 2.25rem;
+		border-radius: 9999px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 0.875rem;
+		flex-shrink: 0;
+	}
+
+	.activity-icon.siram {
+		background-color: var(--color-primary-light);
+	}
+
+	.activity-icon.pupuk {
+		background-color: var(--color-accent-soft);
+	}
+
+	.activity-info {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.activity-name {
+		font-weight: 500;
+		font-size: 0.875rem;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.legend-item {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+	}
+
+	.legend-dot {
+		width: 0.375rem;
+		height: 0.375rem;
+		border-radius: 9999px;
+	}
+
+	.legend-dot.primary {
+		background-color: var(--color-primary);
+	}
+
+	.legend-dot.accent {
+		background-color: var(--color-accent);
+	}
+</style>

@@ -7,6 +7,25 @@
 	let { text, variant = 'success' }: Props = $props();
 </script>
 
-<span class="text-xs px-2 py-1 rounded-full font-medium {variant === 'success' ? 'bg-accent-light text-green-900' : 'bg-red-200 text-red-900'}">
+<span class="badge {variant}">
 	{text}
 </span>
+
+<style>
+	.badge {
+		font-size: 0.75rem;
+		padding: 0.25rem 0.5rem;
+		border-radius: 9999px;
+		font-weight: 500;
+	}
+
+	.badge.success {
+		background-color: var(--color-accent-light);
+		color: var(--color-text);
+	}
+
+	.badge.danger {
+		background-color: var(--color-danger-light);
+		color: var(--color-danger-dark);
+	}
+</style>

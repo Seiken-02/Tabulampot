@@ -17,7 +17,7 @@
 </script>
 
 {#if label}
-	<label for={inputId} class="text-xs text-gray-500 mb-1 block">{label}</label>
+	<label for={inputId} class="input-label">{label}</label>
 {/if}
 
 <input 
@@ -25,5 +25,26 @@
 	{type} 
 	{placeholder} 
 	bind:value 
-	class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+	class="text-input"
 />
+
+<style>
+	.input-label {
+		font-size: 0.75rem;
+		color: var(--color-text-muted);
+		margin-bottom: 0.25rem;
+		display: block;
+	}
+
+	.text-input {
+		width: 100%;
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-md);
+		padding: 0.5rem 0.75rem;
+	}
+
+	.text-input:focus {
+		outline: none;
+		box-shadow: 0 0 0 2px var(--color-primary);
+	}
+</style>
