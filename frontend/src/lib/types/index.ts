@@ -15,16 +15,22 @@ export interface User {
 	created_at: string;
 }
 
+export interface Plant {
+	id: number;
+	userId: number;
+	plantTypeId: number;
+	nickname: string;
+	plantingDate: string | null;
+	location: string | null;
+	notes: string | null;
+	createdAt: string;
+	updatedAt: string;
+}
+
 export interface PlantType {
 	id: number;
 	name: string;
-	description: string;
-}
-
-export interface Plant {
-	id: number;
-	plant_type_id: number;
-	name: string;
-	scientific_name: string;
-	planted_at: string;
+	wateringInterval: number;
+	fertilizingInterval: number;
+	description: string | null;
 }

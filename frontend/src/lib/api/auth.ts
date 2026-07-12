@@ -1,5 +1,3 @@
-import { apiFetch } from './client';
-
 interface RegisterPayload {
 	name: string;
 	email: string;
@@ -12,23 +10,33 @@ interface LoginPayload {
 }
 
 interface RegisterResponse {
-	message: string;
+	success: true;
 }
 
 interface LoginResponse {
-	token: string;
+	success: true;
+}
+
+async function postJson<T>(url: string, body: unknown): Promise<T> {
+	const res = await fetch(url, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify(body)
+	});
+
+	const result = await res.json();
+
+	if (!res.ok) {
+		throw new Error(result.message ?? 'Terjadi kesalahan pada server');
+	}
+
+	return result;
 }
 
 export function registerUser(payload: RegisterPayload) {
-	return apiFetch<RegisterResponse>('/api/auth/register', {
-		method: 'POST',
-		body: payload
-	});
+	return postJson<RegisterResponse>('/api/auth/register', payload);
 }
 
 export function loginUser(payload: LoginPayload) {
-	return apiFetch<LoginResponse>('/api/auth/login', {
-		method: 'POST',
-		body: payload
-	});
+	return postJson<LoginResponse>('/api/auth/login', payload);
 }

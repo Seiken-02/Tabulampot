@@ -34,10 +34,10 @@
 		isProfileOpen = !isProfileOpen;
 	}
 
-	function handleLogout() {
-		console.log('Logout');
+	async function handleLogout() {
 		isProfileOpen = false;
-		goto(resolve('/login'));
+		await fetch('/api/auth/logout', { method: 'POST' });
+		goto(resolve('/'));
 	}
 </script>
 
