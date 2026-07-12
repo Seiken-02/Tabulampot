@@ -1,14 +1,29 @@
 import express from "express";
-import dotenv from "dotenv";
+import cors from "cors";
+import protectedRoutes from "./routes/protected.route";
 
 import authRoutes from "./routes/auth.route";
-
-dotenv.config();
+import testRoutes from "./routes/test.route";
+import plantRoutes from "./routes/plant.route";
 
 const app = express();
+
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+);
 
 app.use(express.json());
 
 app.use("/api/auth", authRoutes);
+app.use("/api/test", testRoutes);
+app.use("/api/protected", protectedRoutes);
+app.use("/api/plants", plantRoutes);
+
+app.get("/", (req, res) => {
+  res.send("Tabulampot Backend Running");
+});
 
 export default app;
