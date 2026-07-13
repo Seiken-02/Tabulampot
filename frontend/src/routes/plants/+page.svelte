@@ -3,6 +3,15 @@
 	import Navbar from '$lib/components/layout/Navbar.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
+	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
+	import { isLoggedIn } from '$lib/stores/auth.svelte';
+
+	onMount(() => {
+		if (!isLoggedIn()) {
+			goto(resolve('/login'));
+		}
+	});
 
 	interface Plant {
 		id: number;

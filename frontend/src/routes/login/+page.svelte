@@ -1,19 +1,39 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import Card from '$lib/components/ui/Card.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import { loginUser } from '../../lib/api/auth';
 
 	let email = $state('');
 	let password = $state('');
+	let errorMessage = $state('');
+	let isSubmitting = $state(false);
 
-	function handleLogin() {
-		console.log('Email:', email);
-		console.log('Password:', password);
-		// TODO: ganti dengan pemanggilan API login yang sebenarnya
-		goto(resolve('/dashboard'));
+	async function handleLogin() {
+	isSubmitting = true;
+	errorMessage = '';
+
+	try {
+		await loginUser({ email, password });
+
+		const redirectTo = page.url.searchParams.get('redirectTo');
+
+
+		if (redirectTo && redirectTo.startsWith('/') && !redirectTo.startsWith('//')) {
+			// eslint-disable-next-line svelte/no-navigation-without-resolve -- 
+			goto(redirectTo);
+		} else {
+			goto(resolve('/dashboard'));
+		}
+	} catch (err) {
+		errorMessage = err instanceof Error ? err.message : 'Login gagal.';
+	} finally {
+		isSubmitting = false;
 	}
+}
 </script>
 
 <div class="page">
@@ -27,7 +47,13 @@
 			<Input label="Password" type="password" placeholder="••••••••" bind:value={password} />
 		</div>
 
-		<Button variant="primary" onclick={handleLogin} class="submit-btn">Masuk</Button>
+		{#if errorMessage}
+			<p class="field-error">{errorMessage}</p>
+		{/if}
+
+		<Button variant="primary" onclick={handleLogin} disabled={isSubmitting} class="submit-btn">
+			{isSubmitting ? 'Memproses...' : 'Masuk'}
+		</Button>
 
 		<p class="footer-text">
 			belum punya akun? <a href={resolve('/register')} class="link">Daftar</a>
@@ -43,7 +69,6 @@
 		justify-content: center;
 		background-color: var(--color-surface);
 	}
-
 	.title {
 		font-size: 1.125rem;
 		font-weight: 700;
@@ -51,23 +76,24 @@
 		margin-bottom: 1rem;
 		text-align: center;
 	}
-
 	.field {
 		margin-bottom: 0.75rem;
 	}
-
+	.field-error {
+		font-size: 0.75rem;
+		color: var(--color-danger-dark);
+		margin-bottom: 0.5rem;
+	}
 	:global(.submit-btn) {
 		width: 100%;
 		margin-top: 0.25rem;
 	}
-
 	.footer-text {
 		font-size: 0.75rem;
 		text-align: center;
 		color: var(--color-text-muted);
 		margin-top: 0.75rem;
 	}
-
 	.link {
 		color: var(--color-primary);
 	}
