@@ -3,38 +3,26 @@
 	import Navbar from '$lib/components/layout/Navbar.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
-	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
-	import { isLoggedIn } from '$lib/stores/auth.svelte';
-
-	onMount(() => {
-		if (!isLoggedIn()) {
-			goto(resolve('/login'));
-		}
-	});
-
-	interface Plant {
-		id: number;
-		name: string;
-		planted_at: string;
-		status: string;
-	}
+	import { getPlants } from '$lib/api/plants';
+	import { getPlantTypes } from '$lib/api/plant-types';
+	import { getPlantIcon } from '$lib/utils/plant-icon';
+	import type { Plant, PlantType } from '$lib/types';
 
 	let plants = $state<Plant[]>([]);
+	let plantTypes = $state<PlantType[]>([]);
 	let isLoading = $state(true);
 	let errorMessage = $state('');
 
 	let showScrollTop = $state(false);
 
 	$effect(() => {
-		loadPlants();
+		loadData();
 	});
 
 	$effect(() => {
 		function handleScroll() {
 			showScrollTop = window.scrollY > 300;
 		}
-
 		window.addEventListener('scroll', handleScroll);
 		return () => window.removeEventListener('scroll', handleScroll);
 	});
@@ -43,24 +31,28 @@
 		window.scrollTo({ top: 0, behavior: 'smooth' });
 	}
 
-	async function loadPlants() {
+	async function loadData() {
 		isLoading = true;
 		errorMessage = '';
 
 		try {
-			// TODO: ganti URL ini sesuai endpoint backend-mu
-			const res = await fetch('/api/plants');
-
-			if (!res.ok) {
-				throw new Error(`Gagal memuat data (${res.status})`);
-			}
-
-			plants = await res.json();
+			const [plantsResult, typesResult] = await Promise.all([getPlants(), getPlantTypes()]);
+			plants = plantsResult;
+			plantTypes = typesResult;
 		} catch (err) {
 			errorMessage = err instanceof Error ? err.message : 'Gagal memuat data tanaman.';
 		} finally {
 			isLoading = false;
 		}
+	}
+
+	function getType(plantTypeId: number): PlantType | undefined {
+		return plantTypes.find((t) => t.id === plantTypeId);
+	}
+
+	function formatTanggal(iso: string | null): string {
+		if (!iso) return 'Belum diisi';
+		return new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 	}
 </script>
 
@@ -83,17 +75,16 @@
 			<p class="status-text">Belum ada tanaman. Tambahkan yang pertama!</p>
 		{:else}
 			{#each plants as plant (plant.id)}
+				{@const type = getType(plant.plantTypeId)}
 				<a href={resolve('/plants/[id]', { id: String(plant.id) })} class="plant-link">
 					<Card>
 						<div class="plant-row">
-							<div>
-								<p class="plant-name">{plant.name}</p>
-								<p class="plant-date">Ditanam {plant.planted_at}</p>
+							<div class="plant-icon">{getPlantIcon(type?.name)}</div>
+							<div class="plant-info">
+								<p class="plant-name">{plant.nickname}</p>
+								<p class="plant-date">Ditanam {formatTanggal(plant.plantingDate)}</p>
 							</div>
-							<Badge
-								text={plant.status}
-								variant={plant.status === 'Sehat' ? 'success' : 'danger'}
-							/>
+							<Badge text={type?.name ?? 'Tidak diketahui'} variant="success" />
 						</div>
 					</Card>
 				</a>
@@ -153,7 +144,24 @@
 	.plant-row {
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
+		gap: 0.75rem;
+	}
+
+	.plant-icon {
+		width: 2.5rem;
+		height: 2.5rem;
+		border-radius: var(--radius-md);
+		background-color: var(--color-accent-soft);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 1.25rem;
+		flex-shrink: 0;
+	}
+
+	.plant-info {
+		flex: 1;
+		min-width: 0;
 	}
 
 	.plant-name {

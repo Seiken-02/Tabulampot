@@ -3,16 +3,6 @@
 	import Card from '$lib/components/ui/Card.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Calendar from '$lib/components/ui/Calender.svelte';
-	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
-	import { isLoggedIn } from '$lib/stores/auth.svelte';
-
-onMount(() => {
-	if (!isLoggedIn()) {
-		goto(resolve('/login'));
-	}
-});
 
 	// TODO: 
 	// (+page.server.ts) yang fetch dari activity_logs, plant_types, dan API cuaca.

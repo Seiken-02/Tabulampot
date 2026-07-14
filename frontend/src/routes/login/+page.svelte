@@ -5,7 +5,8 @@
 	import Card from '$lib/components/ui/Card.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
-	import { loginUser } from '../../lib/api/auth';
+	import { loginUser } from '$lib/api/auth';
+	import { setToken } from '$lib/stores/auth.svelte';
 
 	let email = $state('');
 	let password = $state('');
@@ -13,27 +14,22 @@
 	let isSubmitting = $state(false);
 
 	async function handleLogin() {
-	isSubmitting = true;
-	errorMessage = '';
+		isSubmitting = true;
+		errorMessage = '';
 
-	try {
-		await loginUser({ email, password });
-
-		const redirectTo = page.url.searchParams.get('redirectTo');
-
-
-		if (redirectTo && redirectTo.startsWith('/') && !redirectTo.startsWith('//')) {
-			// eslint-disable-next-line svelte/no-navigation-without-resolve -- 
-			goto(redirectTo);
-		} else {
-			goto(resolve('/dashboard'));
+		try {
+			const response = await loginUser({ email, password });
+			setToken(response.token);
+			const redirectTo = page.url.searchParams.get('redirectTo');
+			// Hanya izinkan path internal (mencegah open redirect ke domain luar)
+			const target = redirectTo?.startsWith('/') ? redirectTo : '/dashboard';
+			goto(target);
+		} catch (err) {
+			errorMessage = err instanceof Error ? err.message : 'Login gagal.';
+		} finally {
+			isSubmitting = false;
 		}
-	} catch (err) {
-		errorMessage = err instanceof Error ? err.message : 'Login gagal.';
-	} finally {
-		isSubmitting = false;
 	}
-}
 </script>
 
 <div class="page">

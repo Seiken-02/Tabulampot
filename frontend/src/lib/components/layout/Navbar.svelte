@@ -4,6 +4,8 @@
 	import { page } from '$app/state';
 	import { slide } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
+	import { invalidateAll } from '$app/navigation';
+	import { clearAuth } from '$lib/stores/auth.svelte';
 
 	interface NavItem {
 		label: string;
@@ -18,9 +20,6 @@
 		{ label: 'Support', href: '/support' }
 	];
 
-	// TODO: sesuaikan sumber data user ini dengan auth-mu yang sebenarnya.
-	// Asumsi: +layout.server.ts (atau hooks) taruh user login ke `data.user`,
-	// jadi otomatis nyambung ke page.data lewat load function.
 	const user = $derived(page.data.user as { name: string; email: string } | undefined);
 
 	let isMenuOpen = $state(false);
@@ -36,10 +35,14 @@
 
 	async function handleLogout() {
 		isProfileOpen = false;
-		await fetch('/api/auth/logout', { method: 'POST' });
+		// Ini yang bikin dashboard/plants langsung ke-lock lagi setelah logout —
+		// tanpa ini, token lama tetap nyangkut di localStorage selamanya.
+		clearAuth();
+		await invalidateAll();
 		goto(resolve('/'));
 	}
 </script>
+
 
 <nav class="navbar">
 	<!-- Wrapper utama -->
@@ -114,7 +117,9 @@
 		background-color: var(--color-white);
 		border-bottom: 1px solid var(--color-border);
 		padding: 0.75rem 1rem 0.75rem 1.5rem;
-		position: relative;
+		position: sticky;
+        top: 0;
+        z-index: 30;
 	}
 
 	.nav-inner {
