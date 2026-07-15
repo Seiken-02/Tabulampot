@@ -1,24 +1,27 @@
 <script lang="ts">
 	import Navbar from '$lib/components/layout/Navbar.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
 	import Calendar from '$lib/components/ui/Calender.svelte';
+	import { getPlants, getPlantHistory } from '$lib/api/plants';
+	import { getPlantTypes } from '$lib/api/plant-types';
+	import { getProfile } from '$lib/api/auth';
+	import type { Plant, PlantType, ActivityLog } from '$lib/types';
 
-	// TODO: 
-	// (+page.server.ts) yang fetch dari activity_logs, plant_types, dan API cuaca.
-	interface DashboardData {
-		userName: string;
-		cuaca: { suhu: number; kondisi: string; icon: string };
-		tanggalSiram: number[];
-		tanggalPupuk: number[];
-		tanggalHujan: number[];
-		aktivitasTerbaru: { id: number; name: string; type: 'siram' | 'pupuk'; status: string }[];
-	}
+	let plants = $state<Plant[]>([]);
+	let plantTypes = $state<PlantType[]>([]);
+	let historyByPlant = $state<Record<number, ActivityLog[]>>({});
+	let cuaca = $state<{ suhu: number; kondisi: string; icon: string } | null>(null);
+	let userLabel = $state('');
 
-	let { data }: { data: DashboardData } = $props();
+	let isLoading = $state(true);
+	let errorMessage = $state('');
 
 	const today = new Date();
-	const hariIni = today.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
+	const hariIni = today.toLocaleDateString('id-ID', {
+		weekday: 'long',
+		day: 'numeric',
+		month: 'long'
+	});
 	const namaBulan = today.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
 
 	const year = today.getFullYear();
@@ -33,16 +36,129 @@
 		return days;
 	});
 
-	function isHujan(day: number) {
-		return data.tanggalHujan.includes(day);
+	$effect(() => {
+		loadDashboard();
+		loadWeather();
+	});
+
+	async function loadDashboard() {
+		isLoading = true;
+		errorMessage = '';
+
+		try {
+			const [plantsResult, typesResult, profile] = await Promise.all([
+				getPlants(),
+				getPlantTypes(),
+				getProfile().catch(() => null)
+			]);
+			plants = plantsResult;
+			plantTypes = typesResult;
+			userLabel = profile?.user.email.split('@')[0] ?? '';
+
+			const histories = await Promise.all(plants.map((p) => getPlantHistory(String(p.id))));
+			const map: Record<number, ActivityLog[]> = {};
+			plants.forEach((p, i) => (map[p.id] = histories[i]));
+			historyByPlant = map;
+		} catch (err) {
+			errorMessage = err instanceof Error ? err.message : 'Gagal memuat dashboard.';
+		} finally {
+			isLoading = false;
+		}
 	}
 
-	// Diberikan ke <Calendar> untuk nentuin titik & ikon tiap tanggal
+	// Cuaca real-time via Open-Meteo (gratis, tanpa API key perlu di-setup)
+	// Lokasi: Pamekasan, Madura
+	async function loadWeather() {
+		try {
+			const res = await fetch(
+				'https://api.open-meteo.com/v1/forecast?latitude=-7.1667&longitude=113.4833&current=temperature_2m,weather_code'
+			);
+			const data = await res.json();
+			const code: number = data.current.weather_code;
+			cuaca = {
+				suhu: Math.round(data.current.temperature_2m),
+				kondisi: kondisiFromCode(code),
+				icon: iconFromCode(code)
+			};
+		} catch {
+			cuaca = null;
+		}
+	}
+
+	function kondisiFromCode(code: number): string {
+		if (code === 0) return 'Cerah';
+		if ([1, 2, 3].includes(code)) return 'Cerah Berawan';
+		if ([45, 48].includes(code)) return 'Berkabut';
+		if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code)) return 'Hujan';
+		if ([95, 96, 99].includes(code)) return 'Badai Petir';
+		return 'Berawan';
+	}
+
+	function iconFromCode(code: number): string {
+		if (code === 0) return '☀️';
+		if ([1, 2, 3].includes(code)) return '⛅';
+		if ([45, 48].includes(code)) return '🌫️';
+		if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code)) return '🌧️';
+		if ([95, 96, 99].includes(code)) return '⛈️';
+		return '☁️';
+	}
+
+	// Log aktivitas terbaru: gabungkan semua riwayat siram/pupuk dari semua tanaman,
+	// urutkan dari yang paling baru terjadi
+	const aktivitasTerbaru = $derived.by(() => {
+		const items: {
+			id: string;
+			name: string;
+			type: 'siram' | 'pupuk';
+			waktu: string;
+			timestamp: number;
+		}[] = [];
+
+		for (const p of plants) {
+			const logs = historyByPlant[p.id] ?? [];
+			for (const log of logs) {
+				items.push({
+					id: `${log.id}`,
+					name: p.nickname,
+					type: log.activityType === 'watering' ? 'siram' : 'pupuk',
+					waktu: formatWaktuRelatif(log.activityDate),
+					timestamp: new Date(log.activityDate).getTime()
+				});
+			}
+		}
+
+		return items.sort((a, b) => b.timestamp - a.timestamp).slice(0, 8);
+	});
+
+	function formatWaktuRelatif(iso: string): string {
+		const diffMs = Date.now() - new Date(iso).getTime();
+		const diffMin = Math.floor(diffMs / (1000 * 60));
+		const diffJam = Math.floor(diffMin / 60);
+		const diffHari = Math.floor(diffJam / 24);
+
+		if (diffMin < 1) return 'Baru saja';
+		if (diffMin < 60) return `${diffMin} menit lalu`;
+		if (diffJam < 24) return `${diffJam} jam lalu`;
+		if (diffHari === 1) return 'Kemarin';
+		if (diffHari < 7) return `${diffHari} hari lalu`;
+		return new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+	}
+
+	// Titik kalender bulan ini diambil dari riwayat siram/pupuk yang beneran tercatat
 	function getMarkers(day: number) {
 		const dots: ('primary' | 'accent')[] = [];
-		if (data.tanggalSiram.includes(day) && !isHujan(day)) dots.push('primary');
-		if (data.tanggalPupuk.includes(day)) dots.push('accent');
-		return { dots, emoji: isHujan(day) ? '🌧️' : undefined };
+
+		for (const logs of Object.values(historyByPlant)) {
+			for (const log of logs) {
+				const d = new Date(log.activityDate);
+				if (d.getFullYear() === year && d.getMonth() === month && d.getDate() === day) {
+					if (log.activityType === 'watering' && !dots.includes('primary')) dots.push('primary');
+					if (log.activityType === 'fertilizing' && !dots.includes('accent')) dots.push('accent');
+				}
+			}
+		}
+
+		return { dots };
 	}
 </script>
 
@@ -50,47 +166,60 @@
 
 <div class="page">
 	<div class="greeting">
-		<p class="greeting-name">Halo, {data.userName} 👋</p>
+		<p class="greeting-name">Halo{userLabel ? `, ${userLabel}` : ''} 👋</p>
 		<p class="greeting-date">{hariIni}</p>
 	</div>
 
 	<Card>
-		<div class="weather">
-			<span class="weather-icon">{data.cuaca.icon}</span>
-			<div>
-				<p class="weather-temp">{data.cuaca.suhu}°C</p>
-				<p class="weather-desc">{data.cuaca.kondisi}</p>
+		{#if cuaca}
+			<div class="weather">
+				<span class="weather-icon">{cuaca.icon}</span>
+				<div>
+					<p class="weather-temp">{cuaca.suhu}°C</p>
+					<p class="weather-desc">{cuaca.kondisi}</p>
+				</div>
 			</div>
-		</div>
+		{:else}
+			<p class="status-text">Memuat cuaca...</p>
+		{/if}
 	</Card>
 
 	<Calendar {namaBulan} days={calendarDays} filledDay={today.getDate()} {getMarkers}>
 		{#snippet legend()}
-			<span class="legend-item"><span class="legend-dot primary"></span> Perlu disiram</span>
-			<span class="legend-item"><span class="legend-dot accent"></span> Perlu dipupuk</span>
-			<span class="legend-item">🌧️ Hujan</span>
+			<span class="legend-item"><span class="legend-dot primary"></span> Disiram</span>
+			<span class="legend-item"><span class="legend-dot accent"></span> Dipupuk</span>
 		{/snippet}
 	</Calendar>
 
 	<div class="activity-header">
 		<h2 class="section-title">Aktivitas Terbaru</h2>
-		<span class="section-hint">Update tiap hari</span>
+		<span class="section-hint">Riwayat siram & pupuk</span>
 	</div>
 
 	<div class="activity-list">
-		{#each data.aktivitasTerbaru as item (item.id)}
-			<Card>
-				<div class="activity-row">
-					<span class="activity-icon {item.type}">
-						{item.type === 'siram' ? '💧' : '🌱'}
-					</span>
-					<div class="activity-info">
-						<p class="activity-name">{item.name}</p>
+		{#if isLoading}
+			<p class="status-text">Memuat aktivitas...</p>
+		{:else if errorMessage}
+			<p class="status-text error">{errorMessage}</p>
+		{:else if aktivitasTerbaru.length === 0}
+			<p class="status-text">Belum ada aktivitas siram atau pupuk yang tercatat.</p>
+		{:else}
+			{#each aktivitasTerbaru as item (item.id)}
+				<Card>
+					<div class="activity-row">
+						<span class="activity-icon {item.type}">
+							{item.type === 'siram' ? '💧' : '🌱'}
+						</span>
+						<div class="activity-info">
+							<p class="activity-name">
+								{item.name} · {item.type === 'siram' ? 'disiram' : 'dipupuk'}
+							</p>
+							<p class="activity-time">{item.waktu}</p>
+						</div>
 					</div>
-					<Badge text={item.status} variant={item.status === 'Mendesak' ? 'danger' : 'success'} />
-				</div>
-			</Card>
-		{/each}
+				</Card>
+			{/each}
+		{/if}
 	</div>
 </div>
 
@@ -135,6 +264,17 @@
 	.weather-desc {
 		font-size: 0.75rem;
 		color: var(--color-text-muted);
+	}
+
+	.status-text {
+		font-size: 0.875rem;
+		color: var(--color-text-muted);
+		text-align: center;
+		padding: 0.5rem 0;
+	}
+
+	.status-text.error {
+		color: var(--color-danger-dark);
 	}
 
 	.activity-header {
@@ -198,6 +338,11 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+	}
+
+	.activity-time {
+		font-size: 0.75rem;
+		color: var(--color-text-muted);
 	}
 
 	.legend-item {

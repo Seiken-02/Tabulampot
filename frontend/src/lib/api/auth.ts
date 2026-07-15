@@ -19,6 +19,11 @@ interface LoginResponse {
 	token: string;
 }
 
+interface ProfileResponse {
+	success: boolean;
+	user: { id: number; email: string };
+}
+
 export function registerUser(payload: RegisterPayload) {
 	return apiFetch<RegisterResponse>('/api/auth/register', {
 		method: 'POST',
@@ -31,4 +36,8 @@ export function loginUser(payload: LoginPayload) {
 		method: 'POST',
 		body: payload
 	});
+}
+
+export function getProfile() {
+	return apiFetch<ProfileResponse>('/api/protected/profile');
 }

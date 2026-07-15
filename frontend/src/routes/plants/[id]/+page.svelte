@@ -1,13 +1,17 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import Navbar from '$lib/components/layout/Navbar.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Calendar from '$lib/components/ui/Calender.svelte';
-	import { getPlantById, getPlantHistory, waterPlant, fertilizePlant } from '$lib/api/plants';
+	import { getPlantById, getPlantHistory, waterPlant, fertilizePlant, deletePlant } from '$lib/api/plants';
 	import { getPlantTypes } from '$lib/api/plant-types';
 	import type { Plant, ActivityLog, PlantType } from '$lib/types';
+
+	let isDeleting = $state(false);
 
 	let plant = $state<Plant | null>(null);
 	let history = $state<ActivityLog[]>([]);
@@ -141,6 +145,21 @@
 			isActionLoading = false;
 		}
 	}
+
+	async function handleDelete() {
+		if (!plant) return;
+		const yakin = confirm(`Hapus "${plant.nickname}"? Riwayat perawatannya juga akan ikut terhapus.`);
+		if (!yakin) return;
+
+		isDeleting = true;
+		try {
+			await deletePlant(String(plant.id));
+			goto(resolve('/plants'));
+		} catch (err) {
+			errorMessage = err instanceof Error ? err.message : 'Gagal menghapus tanaman.';
+			isDeleting = false;
+		}
+	}
 	// Hitung jadwal siram/pupuk berikutnya
 	function getNextSchedule(activityType: 'watering' | 'fertilizing', intervalDays: number) {
 		const logs = history
@@ -193,6 +212,20 @@
 					</p>
 				</div>
 				<Badge text={status} variant={status === 'Sehat' ? 'success' : 'danger'} />
+			</div>
+
+			<div class="manage-row">
+				<a href={resolve('/plants/[id]/edit', { id: String(plant.id) })} class="manage-link">
+					✏️ Edit
+				</a>
+				<button
+					type="button"
+					class="manage-link danger"
+					onclick={handleDelete}
+					disabled={isDeleting}
+				>
+					🗑️ {isDeleting ? 'Menghapus...' : 'Hapus'}
+				</button>
 			</div>
 
 			{#if errorMessage}
@@ -290,6 +323,31 @@
 	.plant-date {
 		font-size: 0.75rem;
 		color: var(--color-text-muted);
+	}
+
+	.manage-row {
+		display: flex;
+		gap: 1rem;
+		margin-bottom: 0.75rem;
+	}
+
+	.manage-link {
+		font-size: 0.75rem;
+		font-weight: 500;
+		color: var(--color-text-muted);
+		background: none;
+		border: none;
+		padding: 0;
+		cursor: pointer;
+	}
+
+	.manage-link.danger {
+		color: var(--color-danger-dark);
+	}
+
+	.manage-link:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
 	}
 
 	.action-grid {
