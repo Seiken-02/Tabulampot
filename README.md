@@ -69,17 +69,17 @@ users
 
 | Method | Endpoint | Payload Body | Format Respons |
 |---|---|---|---|
-| `POST` | `/register` | `TODO` | `TODO` |
-| `POST` | `/login` | `TODO` | `TODO` |
-| `GET` | `/dashboard` | – | `TODO` |
-| `GET` | `/plant-types` | – | `TODO` |
-| `GET` | `/plants` | – | `TODO` |
-| `POST` | `/plants` | `TODO` | `TODO` |
-| `PUT` | `/plants/:id` | `TODO` | `TODO` |
-| `DELETE` | `/plants/:id` | – | `TODO` |
-| `POST` | `/plants/:id/water` | `TODO` | `TODO` |
-| `POST` | `/plants/:id/fertilize` | `TODO` | `TODO` |
-| `GET` | `/plants/:id/history` | – | `TODO` |
+| `POST` | `/register` | `{ "name": "Panji", "email": "panji@gmail.com", "password": "123456" }` | `{ "message": "Register berhasil" }` |
+| `POST` | `/login` | `{ "email": "panji@gmail.com", "password": "123456" }` | `{ "token": "..." }` |
+| `GET` | `/dashboard` | – | `{ "totalPlants": 1, "needWatering": , "needFertilizing":  }` |
+| `GET` | `/plant-types` | – | `{"id":1,"name":"Mangga","wateringInterval":3,"fertilizingInterval":30,"description":"Mangga Harum Manis","createdAt":"2026-07-13T11:46:24.000Z"},{"id":2,"name":"Jambu","wateringInterval":2,"fertilizingInterval":21,"description":"Jambu Kristal","createdAt":"2026-07-13T11:46:24.000Z"},{"id":3,"name":"Jeruk","wateringInterval":2,"fertilizingInterval":14,"description":"Jeruk Nipis","createdAt":"2026-07-13T11:46:24.000Z"}` |
+| `GET` | `/plants` | – | `{"id":2,"userId":1,"plantTypeId":1,"nickname":"Mangga Depan Rumah","plantingDate":"2026-07-13T00:00:00.000Z","location":"Teras","notes":"Bibit umur 3 bulan","createdAt":"2026-07-13T10:52:28.000Z","updatedAt":"2026-07-13T10:52:28.000Z"}` |
+| `POST` | `/plants` | `{ "plantTypeId": 1, "nickname": "Mangga Depan Rumah", "plantingDate": "2026-07-13T00:00:00.000Z", "location": "Teras", "notes": "Bibit umur 3 bulan", "createdAt":"2026-07-13T10:52:28.000Z","updatedAt":"2026-07-13T10:52:28.000Z" }` | `{ "message": "Tanaman berhasil ditambahkan" }` |
+| `PUT` | `/plants/:id` | `{ "nickname": "Mangga Belakang Rumah" }` | `{"message":"Tanaman berhasil diupdate"}` |
+| `DELETE` | `/plants/:id` | – | `{ "message": "Tanaman berhasil dihapus" }` |
+| `POST` | `/plants/:id/water` | `{"notes":"Disiram pagi"}` | `{"message":"Penyiraman berhasil dicatat"}` |
+| `POST` | `/plants/:id/fertilize` | `{"notes":"Pupuk NPK"}` | `{"message":"Pemupukan berhasil dicatat"}` |
+| `GET` | `/plants/:id/history` | – | `{"id":3,"plantId":2,"activityType":"fertilizing","activityDate":"2026-07-15T13:40:29.000Z","notes":null,"createdAt":"2026-07-15T20:40:29.000Z"},{"id":2,"plantId":2,"activityType":"watering","activityDate":"2026-07-15T13:39:41.000Z","notes":null,"createdAt":"2026-07-15T20:39:41.000Z"}` |
 
 <!-- 🔧 PLACEHOLDER: isi kolom Payload Body & Format Respons begitu endpoint backend selesai diimplementasi -->
 
