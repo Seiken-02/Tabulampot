@@ -4,7 +4,7 @@
 
 <footer class="footer">
 	<div class="footer-inner">
-		<span class="brand-name">🌿 Tabulampot</span>
+		<span class="brand-name">Tabulampot</span>
 		<p class="copyright">© 2026 Tabulampot. Dibuat untuk pekebun rumahan.</p>
 	</div>
 </footer>
@@ -38,7 +38,6 @@
 		color: var(--color-text-muted);
 	}
 
-	/* Setara md: breakpoint Tailwind (768px) */
 	@media (min-width: 768px) {
 		.footer-inner {
 			flex-direction: row;

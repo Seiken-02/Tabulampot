@@ -4,6 +4,7 @@
 	import Card from '$lib/components/ui/Card.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import { registerUser } from '$lib/api/auth';
 
 	let nama = $state('');
 	let email = $state('');
@@ -16,18 +17,7 @@
 		errorMessage = '';
 
 		try {
-			const res = await fetch('/api/auth/register', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ name: nama, email, password })
-			});
-
-			const data = await res.json();
-
-			if (!res.ok) {
-				throw new Error(data.message ?? 'Registrasi gagal.');
-			}
-
+			await registerUser({ name: nama, email, password });
 			goto(resolve('/login'));
 		} catch (err) {
 			errorMessage = err instanceof Error ? err.message : 'Registrasi gagal.';

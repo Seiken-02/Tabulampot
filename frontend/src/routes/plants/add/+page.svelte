@@ -6,22 +6,24 @@
 	import Input from '$lib/components/ui/Input.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
-
-	interface PlantTypeOption {
-		value: string;
-		label: string;
-	}
+	import { getPlantTypes } from '$lib/api/plant-types';
+	import { createPlant } from '$lib/api/plants';
+	import type { PlantType } from '$lib/types';
 
 	let name = $state('');
 	let plantType = $state('');
 	let plantedAt = $state('');
 
-	let plantTypeOptions = $state<PlantTypeOption[]>([]);
+	let plantTypes = $state<PlantType[]>([]);
 	let isLoadingTypes = $state(true);
 	let loadError = $state('');
 
 	let isSubmitting = $state(false);
 	let submitError = $state('');
+
+	const plantTypeOptions = $derived(
+		plantTypes.map((t) => ({ value: String(t.id), label: t.name }))
+	);
 
 	$effect(() => {
 		loadPlantTypes();
@@ -32,18 +34,10 @@
 		loadError = '';
 
 		try {
-			// TODO:endpoint ini akan diganti dengan backend
-			const res = await fetch('/api/plant-types');
+			plantTypes = await getPlantTypes();
 
-			if (!res.ok) {
-				throw new Error(`Gagal memuat jenis tanaman (${res.status})`);
-			}
-
-			plantTypeOptions = await res.json();
-
-			// Set default pilihan ke opsi pertama begitu data datang
-			if (plantTypeOptions.length > 0) {
-				plantType = plantTypeOptions[0].value;
+			if (plantTypes.length > 0) {
+				plantType = String(plantTypes[0].id);
 			}
 		} catch (err) {
 			loadError = err instanceof Error ? err.message : 'Gagal memuat jenis tanaman.';
@@ -53,8 +47,8 @@
 	}
 
 	async function handleSubmit() {
-		if (!name || !plantType || !plantedAt) {
-			submitError = 'Semua field wajib diisi.';
+		if (!name || !plantType) {
+			submitError = 'Nama dan jenis tanaman wajib diisi.';
 			return;
 		}
 
@@ -62,20 +56,11 @@
 		submitError = '';
 
 		try {
-			// TODO: sesuaikan endpoint & body dengan backend
-			const res = await fetch('/api/plants', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					name,
-					plant_type: plantType,
-					planted_at: plantedAt
-				})
+			await createPlant({
+				plantTypeId: Number(plantType),
+				nickname: name,
+				plantingDate: plantedAt || undefined
 			});
-
-			if (!res.ok) {
-				throw new Error(`Gagal menyimpan tanaman (${res.status})`);
-			}
 
 			goto(resolve('/plants'));
 		} catch (err) {

@@ -1,18 +1,19 @@
 import { PUBLIC_API_URL } from '$env/static/public';
+import { getToken } from '$lib/stores/auth.svelte';
 
 interface RequestOptions {
 	method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
 	body?: unknown;
-	token?: string;
 }
 
 export async function apiFetch<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-	const { method = 'GET', body, token } = options;
+	const { method = 'GET', body } = options;
 
 	const headers: Record<string, string> = {
 		'Content-Type': 'application/json'
 	};
 
+	const token = getToken();
 	if (token) {
 		headers['Authorization'] = `Bearer ${token}`;
 	}

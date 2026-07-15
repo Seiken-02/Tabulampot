@@ -1,48 +1,45 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import Navbar from '$lib/components/layout/Navbar.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Calendar from '$lib/components/ui/Calender.svelte';
+	import { getPlantById, getPlantHistory, waterPlant, fertilizePlant, deletePlant } from '$lib/api/plants';
+	import { getPlantTypes } from '$lib/api/plant-types';
+	import type { Plant, ActivityLog, PlantType } from '$lib/types';
 
-	interface PlantHistoryItem {
-		id: number;
-		type: 'siram' | 'pupuk';
-		date: string; 
-	}
-
-	interface Plant {
-		id: string;
-		name: string;
-		planted_at: string; 
-		status: string;
-		history: PlantHistoryItem[];
-	}
+	let isDeleting = $state(false);
 
 	let plant = $state<Plant | null>(null);
+	let history = $state<ActivityLog[]>([]);
+	let plantTypes = $state<PlantType[]>([]);
+
 	let isLoading = $state(true);
 	let errorMessage = $state('');
+	let isActionLoading = $state(false);
 
 	$effect(() => {
 		if (page.params.id) {
-			loadPlant(page.params.id);
+			loadData(page.params.id);
 		}
 	});
 
-	async function loadPlant(id: string) {
+	async function loadData(id: string) {
 		isLoading = true;
 		errorMessage = '';
 
 		try {
-			// TODO: ganti URL sesuai endpoint backend
-			const res = await fetch(`/api/plants/${id}`);
-
-			if (!res.ok) {
-				throw new Error(`Gagal memuat data (${res.status})`);
-			}
-
-			plant = await res.json();
+			const [plantResult, historyResult, typesResult] = await Promise.all([
+				getPlantById(id),
+				getPlantHistory(id),
+				getPlantTypes()
+			]);
+			plant = plantResult;
+			history = historyResult;
+			plantTypes = typesResult;
 		} catch (err) {
 			errorMessage = err instanceof Error ? err.message : 'Gagal memuat data tanaman.';
 		} finally {
@@ -50,13 +47,46 @@
 		}
 	}
 
-	const calendarMeta = $derived.by(() => {
-		if (!plant) return null;
+	const plantType = $derived(plantTypes.find((t) => t.id === plant?.plantTypeId));
 
-		const plantedDate = new Date(plant.planted_at);
-		const year = plantedDate.getFullYear();
-		const month = plantedDate.getMonth();
-		const namaBulan = plantedDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+	const siramDays = $derived(
+		new Set(
+			history
+				.filter((h) => h.activityType === 'watering')
+				.map((h) => new Date(h.activityDate).getDate())
+		)
+	);
+
+	const pupukDays = $derived(
+		new Set(
+			history
+				.filter((h) => h.activityType === 'fertilizing')
+				.map((h) => new Date(h.activityDate).getDate())
+		)
+	);
+
+	// Status kesehatan dihitung dari tanggal siram terakhir dibanding wateringInterval jenis tanaman
+	const status = $derived.by(() => {
+		if (!plantType) return 'Sehat';
+
+		const wateringLogs = history
+			.filter((h) => h.activityType === 'watering')
+			.sort((a, b) => new Date(b.activityDate).getTime() - new Date(a.activityDate).getTime());
+
+		if (wateringLogs.length === 0) return 'Siram!';
+
+		const lastWatered = new Date(wateringLogs[0].activityDate);
+		const daysSince = Math.floor((Date.now() - lastWatered.getTime()) / (1000 * 60 * 60 * 24));
+
+		return daysSince >= plantType.wateringInterval ? 'Siram!' : 'Sehat';
+	});
+
+	// Kalender ditampilkan untuk bulan tanggal tanam (kalau ada), fallback ke bulan sekarang
+	const calendarMeta = $derived.by(() => {
+		const baseDate = plant?.plantingDate ? new Date(plant.plantingDate) : new Date();
+		const year = baseDate.getFullYear();
+		const month = baseDate.getMonth();
+		const namaBulan = baseDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
 
 		const firstDay = new Date(year, month, 1).getDay();
 		const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -68,43 +98,100 @@
 		const today = new Date();
 		const todayDay = today.getFullYear() === year && today.getMonth() === month ? today.getDate() : undefined;
 
-		return { namaBulan, days, plantedDay: plantedDate.getDate(), todayDay, year, month };
+		const plantedDay =
+			plant?.plantingDate &&
+			new Date(plant.plantingDate).getFullYear() === year &&
+			new Date(plant.plantingDate).getMonth() === month
+				? new Date(plant.plantingDate).getDate()
+				: undefined;
+
+		return { namaBulan, days, plantedDay, todayDay };
 	});
-
-	const siramDays = $derived(
-		new Set(
-			(plant?.history ?? [])
-				.filter((h) => h.type === 'siram')
-				.map((h) => new Date(h.date).getDate())
-		)
-	);
-
-	const pupukDays = $derived(
-		new Set(
-			(plant?.history ?? [])
-				.filter((h) => h.type === 'pupuk')
-				.map((h) => new Date(h.date).getDate())
-		)
-	);
 
 	function getMarkers(day: number) {
 		const dots: ('primary' | 'accent')[] = [];
 		if (siramDays.has(day)) dots.push('primary');
 		if (pupukDays.has(day)) dots.push('accent');
-		return { dots, emoji: day === calendarMeta?.plantedDay ? '🌱' : undefined };
+		return { dots, emoji: day === calendarMeta.plantedDay ? '🌱' : undefined };
 	}
 
-	function formatTanggal(iso: string): string {
+	function formatTanggal(iso: string | null): string {
+		if (!iso) return 'Belum diisi';
 		return new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 	}
 
-	function handleSiram() {
-		console.log('Siram tanaman', plant?.id);
+	async function handleSiram() {
+		if (!plant) return;
+		isActionLoading = true;
+		try {
+			await waterPlant(String(plant.id));
+			history = await getPlantHistory(String(plant.id));
+		} catch (err) {
+			errorMessage = err instanceof Error ? err.message : 'Gagal mencatat siram.';
+		} finally {
+			isActionLoading = false;
+		}
 	}
 
-	function handlePupuk() {
-		console.log('Pupuk tanaman', plant?.id);
+	async function handlePupuk() {
+		if (!plant) return;
+		isActionLoading = true;
+		try {
+			await fertilizePlant(String(plant.id));
+			history = await getPlantHistory(String(plant.id));
+		} catch (err) {
+			errorMessage = err instanceof Error ? err.message : 'Gagal mencatat pupuk.';
+		} finally {
+			isActionLoading = false;
+		}
 	}
+
+	async function handleDelete() {
+		if (!plant) return;
+		const yakin = confirm(`Hapus "${plant.nickname}"? Riwayat perawatannya juga akan ikut terhapus.`);
+		if (!yakin) return;
+
+		isDeleting = true;
+		try {
+			await deletePlant(String(plant.id));
+			goto(resolve('/plants'));
+		} catch (err) {
+			errorMessage = err instanceof Error ? err.message : 'Gagal menghapus tanaman.';
+			isDeleting = false;
+		}
+	}
+	// Hitung jadwal siram/pupuk berikutnya
+	function getNextSchedule(activityType: 'watering' | 'fertilizing', intervalDays: number) {
+		const logs = history
+			.filter((h) => h.activityType === activityType)
+			.sort((a, b) => new Date(b.activityDate).getTime() - new Date(a.activityDate).getTime());
+
+		const baseDateStr = logs[0]?.activityDate ?? plant?.plantingDate ?? new Date().toISOString();
+		const baseDate = new Date(baseDateStr);
+
+		const daysSince = Math.floor((Date.now() - baseDate.getTime()) / (1000 * 60 * 60 * 24));
+		const daysLeft = intervalDays - daysSince;
+
+		return daysLeft;
+	}
+
+	const nextWatering = $derived.by(() => {
+		if (!plantType) return null;
+		return getNextSchedule('watering', plantType.wateringInterval);
+	});
+
+	const nextFertilizing = $derived.by(() => {
+		if (!plantType) return null;
+		return getNextSchedule('fertilizing', plantType.fertilizingInterval);
+	});
+
+	function scheduleLabel(daysLeft: number | null, actionLabel: string): string {
+		if (daysLeft === null) return '';
+		if (daysLeft <= 0) return `Perlu ${actionLabel} sekarang!`;
+		if (daysLeft === 1) return `${actionLabel} lagi besok`;
+		return `${actionLabel} lagi ${daysLeft} hari`;
+	}
+	import { getPlantIcon } from '$lib/utils/plant-icon';
 </script>
 
 <Navbar />
@@ -112,29 +199,58 @@
 <div class="page">
 	{#if isLoading}
 		<p class="status-text">Memuat data tanaman...</p>
-	{:else if errorMessage}
+	{:else if errorMessage && !plant}
 		<p class="status-text error">{errorMessage}</p>
-	{:else if plant && calendarMeta}
-		<!-- Kartu info tanaman: nama, tanggal tanam, status, dan tombol aksi -->
+	{:else if plant}
 		<Card>
 			<div class="plant-header">
-				<div class="plant-icon">🌿</div>
+				<div class="plant-icon">{getPlantIcon(plantType?.name)}</div>
 				<div class="plant-info">
-					<p class="plant-name">{plant.name}</p>
-					<p class="plant-date">Ditanam {formatTanggal(plant.planted_at)}</p>
+					<p class="plant-name">{plant.nickname}</p>
+					<p class="plant-date">
+						{plantType?.name ?? 'Tidak diketahui'} · Ditanam {formatTanggal(plant.plantingDate)}
+					</p>
 				</div>
-				<Badge text={plant.status} variant={plant.status === 'Sehat' ? 'success' : 'danger'} />
+				<Badge text={status} variant={status === 'Sehat' ? 'success' : 'danger'} />
 			</div>
 
+			<div class="manage-row">
+				<a href={resolve('/plants/[id]/edit', { id: String(plant.id) })} class="manage-link">
+					✏️ Edit
+				</a>
+				<button
+					type="button"
+					class="manage-link danger"
+					onclick={handleDelete}
+					disabled={isDeleting}
+				>
+					🗑️ {isDeleting ? 'Menghapus...' : 'Hapus'}
+				</button>
+			</div>
+
+			{#if errorMessage}
+				<p class="field-error">{errorMessage}</p>
+			{/if}
+
 			<div class="action-grid">
-				<Button variant="secondary" onclick={handleSiram} class="action-btn">
+				<Button variant="secondary" onclick={handleSiram} disabled={isActionLoading} class="action-btn">
 					💧 Siram
 				</Button>
-				<Button variant="primary" onclick={handlePupuk} class="action-btn">
+				<Button variant="primary" onclick={handlePupuk} disabled={isActionLoading} class="action-btn">
 					🌱 Pupuk
 				</Button>
 			</div>
 		</Card>
+		<div class="schedule-grid">
+			<div class="schedule-item" class:urgent={nextWatering !== null && nextWatering <= 0}>
+				<span class="schedule-icon">💧</span>
+				<p class="schedule-text">{scheduleLabel(nextWatering, 'disiram')}</p>
+			</div>
+			<div class="schedule-item" class:urgent={nextFertilizing !== null && nextFertilizing <= 0}>
+				<span class="schedule-icon">🌱</span>
+				<p class="schedule-text">{scheduleLabel(nextFertilizing, 'dipupuk')}</p>
+			</div>
+		</div>
 
 		<Calendar
 			namaBulan={calendarMeta.namaBulan}
@@ -171,6 +287,12 @@
 		color: var(--color-danger-dark);
 	}
 
+	.field-error {
+		font-size: 0.75rem;
+		color: var(--color-danger-dark);
+		margin-bottom: 0.75rem;
+	}
+
 	.plant-header {
 		display: flex;
 		align-items: center;
@@ -201,6 +323,31 @@
 	.plant-date {
 		font-size: 0.75rem;
 		color: var(--color-text-muted);
+	}
+
+	.manage-row {
+		display: flex;
+		gap: 1rem;
+		margin-bottom: 0.75rem;
+	}
+
+	.manage-link {
+		font-size: 0.75rem;
+		font-weight: 500;
+		color: var(--color-text-muted);
+		background: none;
+		border: none;
+		padding: 0;
+		cursor: pointer;
+	}
+
+	.manage-link.danger {
+		color: var(--color-danger-dark);
+	}
+
+	.manage-link:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
 	}
 
 	.action-grid {
@@ -242,4 +389,37 @@
 		border-radius: 9999px;
 		border: 2px solid var(--color-primary);
 	}
+	.schedule-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 0.5rem;
+	margin: 0.75rem 0 1.5rem;
+}
+
+.schedule-item {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	background-color: var(--color-surface-muted);
+	border-radius: var(--radius-md);
+	padding: 0.625rem 0.75rem;
+}
+
+.schedule-item.urgent {
+	background-color: var(--color-danger-light);
+}
+
+.schedule-icon {
+	font-size: 1rem;
+}
+
+.schedule-text {
+	font-size: 0.75rem;
+	font-weight: 500;
+	color: var(--color-text);
+}
+
+.schedule-item.urgent .schedule-text {
+	color: var(--color-danger-dark);
+}
 </style>
