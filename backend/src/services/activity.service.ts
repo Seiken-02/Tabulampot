@@ -1,15 +1,41 @@
 import { db } from "../db";
-import { activityLogs } from "../db/schema";
-import { eq, desc } from "drizzle-orm";
+import { activityLogs, plants } from "../db/schema";
+import { eq, and, desc } from "drizzle-orm";
 
 export class ActivityService {
 
-  static async water(plantId: number) {
+  private static async ensureOwnership(
+    plantId: number,
+    userId: number
+  ) {
+    const result = await db
+      .select()
+      .from(plants)
+      .where(
+        and(
+          eq(plants.id, plantId),
+          eq(plants.userId, userId)
+        )
+      );
+
+    if (result.length === 0) {
+      throw new Error("Tanaman tidak ditemukan");
+    }
+  }
+
+  static async water(
+    plantId: number,
+    userId: number,
+    notes?: string
+  ) {
+
+    await this.ensureOwnership(plantId, userId);
 
     await db.insert(activityLogs).values({
       plantId,
       activityType: "watering",
       activityDate: new Date(),
+      notes,
     });
 
     return {
@@ -17,12 +43,19 @@ export class ActivityService {
     };
   }
 
-  static async fertilize(plantId: number) {
+  static async fertilize(
+    plantId: number,
+    userId: number,
+    notes?: string
+  ) {
+
+    await this.ensureOwnership(plantId, userId);
 
     await db.insert(activityLogs).values({
       plantId,
       activityType: "fertilizing",
       activityDate: new Date(),
+      notes,
     });
 
     return {
@@ -30,7 +63,9 @@ export class ActivityService {
     };
   }
 
-  static async history(plantId: number) {
+  static async history(plantId: number, userId: number) {
+
+    await this.ensureOwnership(plantId, userId);
 
     return await db
       .select()

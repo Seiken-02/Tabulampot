@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { plants } from "../db/schema";
+import { plants, activityLogs } from "../db/schema";
 import { eq, and } from "drizzle-orm";
 
 export class PlantService {
@@ -30,10 +30,19 @@ export class PlantService {
 
   static async create(data: any) {
 
-    await db.insert(plants).values(data);
+    const [inserted] = await db
+      .insert(plants)
+      .values(data)
+      .$returningId(); // ambil id yang baru dibuat
+
+    const [newPlant] = await db
+      .select()
+      .from(plants)
+      .where(eq(plants.id, inserted.id));
 
     return {
       message: "Tanaman berhasil ditambahkan",
+      data: newPlant,
     };
   }
 
@@ -53,8 +62,19 @@ export class PlantService {
         )
       );
 
+    const [updatedPlant] = await db
+      .select()
+      .from(plants)
+      .where(
+        and(
+          eq(plants.id, id),
+          eq(plants.userId, userId)
+        )
+      );
+
     return {
       message: "Tanaman berhasil diupdate",
+      data: updatedPlant,
     };
   }
 
@@ -62,6 +82,24 @@ export class PlantService {
     id: number,
     userId: number
   ) {
+
+    const existing = await db
+      .select()
+      .from(plants)
+      .where(
+        and(
+          eq(plants.id, id),
+          eq(plants.userId, userId)
+        )
+      );
+
+    if (existing.length === 0) {
+      throw new Error("Tanaman tidak ditemukan");
+    }
+
+    await db
+      .delete(activityLogs)
+      .where(eq(activityLogs.plantId, id));
 
     await db
       .delete(plants)

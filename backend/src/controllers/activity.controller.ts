@@ -8,12 +8,18 @@ export class ActivityController {
     res: Response
   ) {
 
+    const userId = (req.user as any).id;
     const plantId = Number(req.params.id);
+    const { notes } = req.body;
 
-    const result =
-      await ActivityService.water(plantId);
+    try {
+      const result =
+        await ActivityService.water(plantId, userId, notes);
 
-    res.json(result);
+      res.json(result);
+    } catch (error: any) {
+      res.status(404).json({ message: error.message });
+    }
   }
 
   static async fertilize(
@@ -21,12 +27,18 @@ export class ActivityController {
     res: Response
   ) {
 
+    const userId = (req.user as any).id;
     const plantId = Number(req.params.id);
+    const { notes } = req.body;
 
-    const result =
-      await ActivityService.fertilize(plantId);
+    try {
+      const result =
+        await ActivityService.fertilize(plantId, userId, notes);
 
-    res.json(result);
+      res.json(result);
+    } catch (error: any) {
+      res.status(404).json({ message: error.message });
+    }
   }
 
   static async history(
@@ -34,11 +46,16 @@ export class ActivityController {
     res: Response
   ) {
 
+    const userId = (req.user as any).id;
     const plantId = Number(req.params.id);
 
-    const result =
-      await ActivityService.history(plantId);
+    try {
+      const result =
+        await ActivityService.history(plantId, userId);
 
-    res.json(result);
+      res.json(result);
+    } catch (error: any) {
+      res.status(404).json({ message: error.message });
+    }
   }
 }
