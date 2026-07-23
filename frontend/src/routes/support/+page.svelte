@@ -69,6 +69,7 @@
 
 	interface DonationLink {
 		icon: string;
+		iconImg?: string;
 		name: string;
 		description: string;
 		href: string;
@@ -77,18 +78,21 @@
 	const donationLinks: DonationLink[] = [
 		{
 			icon: '☕',
+			iconImg: '/icons/saweria.svg',
 			name: 'Saweria',
 			description: 'Traktir kopi buat developer',
 			href: 'https://saweria.co/tabulampot'
 		},
 		{
 			icon: '🎁',
+			iconImg: '/icons/trakteer.svg',
 			name: 'Trakteer',
 			description: 'Dukung lewat Trakteer',
 			href: 'https://trakteer.id/tabulampot'
 		},
 		{
 			icon: '💙',
+			iconImg: '/icons/kofi.png',
 			name: 'Ko-fi',
 			description: 'Support internasional via Ko-fi',
 			href: 'https://ko-fi.com/tabulampot'
@@ -183,7 +187,13 @@
 				<a href={item.href} class="donation-link" target="_blank" rel="noopener noreferrer">
 					<Card>
 						<div class="donation-item">
-							<span class="icon-badge">{item.icon}</span>
+							<span class="icon-badge">
+								{#if item.iconImg}
+									<img src={item.iconImg} alt={item.name} class="icon-img" />
+								{:else}
+									{item.icon}
+								{/if}
+							</span>
 							<div class="donation-text">
 								<span class="donation-name">{item.name}</span>
 								<span class="donation-desc">{item.description}</span>
@@ -390,10 +400,6 @@
 		gap: 0.875rem;
 	}
 
-	.donation-item .icon-badge {
-		margin-bottom: 0;
-	}
-
 	.donation-text {
 		flex: 1;
 		display: flex;
@@ -434,6 +440,21 @@
 		justify-content: center;
 		font-size: 1.375rem;
 		margin-bottom: 1rem;
+		overflow: hidden;
+	}
+
+	.icon-img {
+		width: 100%;
+		height: 100%;
+		object-fit: contain;
+		padding: 0.375rem;
+		box-sizing: border-box;
+	}
+
+	.donation-item .icon-badge {
+		margin-bottom: 0;
+		background-color: var(--color-white);
+		border: 1px solid var(--color-border);
 	}
 
 	.item-title {

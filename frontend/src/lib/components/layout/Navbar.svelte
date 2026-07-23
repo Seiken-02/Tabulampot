@@ -6,6 +6,7 @@
 	import { quintOut } from 'svelte/easing';
 	import { invalidateAll } from '$app/navigation';
 	import { clearAuth } from '$lib/stores/auth.svelte';
+	import { getProfile } from '$lib/api/auth';
 
 	interface NavItem {
 		label: string;
@@ -20,7 +21,16 @@
 		{ label: 'Support', href: '/support' }
 	];
 
-	const user = $derived(page.data.user as { name: string; email: string } | undefined);
+	// page.data.user tidak pernah terisi di sini karena auth-nya berbasis token
+	// di localStorage (client-only), bukan cookie yang bisa dibaca +layout.server.ts.
+	// Jadi profil diambil sendiri lewat API, sama seperti pola di dashboard.
+	let userEmail = $state('');
+
+	$effect(() => {
+		getProfile()
+			.then((res) => (userEmail = res.user.email))
+			.catch(() => (userEmail = ''));
+	});
 
 	let isMenuOpen = $state(false);
 	let isProfileOpen = $state(false);
@@ -74,8 +84,8 @@
 			{#if isProfileOpen}
 				<div transition:slide={{ duration: 200, easing: quintOut }} class="profile-dropdown">
 					<div class="profile-header">
-						<p class="profile-name">{user?.name ?? 'Pengguna'}</p>
-						<p class="profile-email">{user?.email ?? ''}</p>
+						<p class="profile-name">{userEmail ? userEmail.split('@')[0] : 'Pengguna'}</p>
+						<p class="profile-email">{userEmail}</p>
 					</div>
 					<button onclick={handleLogout} class="logout-btn">
 						Keluar

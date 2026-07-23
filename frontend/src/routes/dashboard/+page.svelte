@@ -2,14 +2,10 @@
 	import Navbar from '$lib/components/layout/Navbar.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
 	import Calendar from '$lib/components/ui/Calender.svelte';
-	import { getPlants, getPlantHistory } from '$lib/api/plants';
-	import { getPlantTypes } from '$lib/api/plant-types';
+	import { getDashboardSummary, type DashboardSummary } from '$lib/api/dashboard';
 	import { getProfile } from '$lib/api/auth';
-	import type { Plant, PlantType, ActivityLog } from '$lib/types';
 
-	let plants = $state<Plant[]>([]);
-	let plantTypes = $state<PlantType[]>([]);
-	let historyByPlant = $state<Record<number, ActivityLog[]>>({});
+	let summary = $state<DashboardSummary | null>(null);
 	let cuaca = $state<{ suhu: number; kondisi: string; icon: string } | null>(null);
 	let userLabel = $state('');
 
@@ -46,19 +42,12 @@
 		errorMessage = '';
 
 		try {
-			const [plantsResult, typesResult, profile] = await Promise.all([
-				getPlants(),
-				getPlantTypes(),
+			const [summaryResult, profile] = await Promise.all([
+				getDashboardSummary(),
 				getProfile().catch(() => null)
 			]);
-			plants = plantsResult;
-			plantTypes = typesResult;
+			summary = summaryResult;
 			userLabel = profile?.user.email.split('@')[0] ?? '';
-
-			const histories = await Promise.all(plants.map((p) => getPlantHistory(String(p.id))));
-			const map: Record<number, ActivityLog[]> = {};
-			plants.forEach((p, i) => (map[p.id] = histories[i]));
-			historyByPlant = map;
 		} catch (err) {
 			errorMessage = err instanceof Error ? err.message : 'Gagal memuat dashboard.';
 		} finally {
@@ -66,7 +55,7 @@
 		}
 	}
 
-	// Cuaca real-time via Open-Meteo (gratis, tanpa API key perlu di-setup)
+	// Cuaca real-time via Open-Meteo 
 	// Lokasi: Pamekasan, Madura
 	async function loadWeather() {
 		try {
@@ -103,31 +92,15 @@
 		return '☁️';
 	}
 
-	// Log aktivitas terbaru: gabungkan semua riwayat siram/pupuk dari semua tanaman,
-	// urutkan dari yang paling baru terjadi
+	// Log aktivitas terbaru
 	const aktivitasTerbaru = $derived.by(() => {
-		const items: {
-			id: string;
-			name: string;
-			type: 'siram' | 'pupuk';
-			waktu: string;
-			timestamp: number;
-		}[] = [];
-
-		for (const p of plants) {
-			const logs = historyByPlant[p.id] ?? [];
-			for (const log of logs) {
-				items.push({
-					id: `${log.id}`,
-					name: p.nickname,
-					type: log.activityType === 'watering' ? 'siram' : 'pupuk',
-					waktu: formatWaktuRelatif(log.activityDate),
-					timestamp: new Date(log.activityDate).getTime()
-				});
-			}
-		}
-
-		return items.sort((a, b) => b.timestamp - a.timestamp).slice(0, 8);
+		if (!summary) return [];
+		return summary.recentActivity.map((log) => ({
+			id: String(log.id),
+			name: log.plantName,
+			type: log.activityType === 'watering' ? ('siram' as const) : ('pupuk' as const),
+			waktu: formatWaktuRelatif(log.activityDate)
+		}));
 	});
 
 	function formatWaktuRelatif(iso: string): string {
@@ -144,18 +117,16 @@
 		return new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
 	}
 
-	// Titik kalender bulan ini diambil dari riwayat siram/pupuk yang beneran tercatat
+	// Titik kalender bulan ini: juga langsung dari backend 
 	function getMarkers(day: number) {
 		const dots: ('primary' | 'accent')[] = [];
+		if (!summary) return { dots };
 
-		for (const logs of Object.values(historyByPlant)) {
-			for (const log of logs) {
-				const d = new Date(log.activityDate);
-				if (d.getFullYear() === year && d.getMonth() === month && d.getDate() === day) {
-					if (log.activityType === 'watering' && !dots.includes('primary')) dots.push('primary');
-					if (log.activityType === 'fertilizing' && !dots.includes('accent')) dots.push('accent');
-				}
-			}
+		for (const mark of summary.calendarMarks) {
+			const d = new Date(mark.activityDate);
+			if (d.getDate() !== day) continue;
+			if (mark.activityType === 'watering' && !dots.includes('primary')) dots.push('primary');
+			if (mark.activityType === 'fertilizing' && !dots.includes('accent')) dots.push('accent');
 		}
 
 		return { dots };
@@ -183,6 +154,29 @@
 			<p class="status-text">Memuat cuaca...</p>
 		{/if}
 	</Card>
+
+	{#if summary}
+		<div class="stat-grid">
+			<Card>
+				<div class="stat-item">
+					<span class="stat-number">{summary.totalPlants}</span>
+					<span class="stat-label">Total Tanaman</span>
+				</div>
+			</Card>
+			<Card>
+				<div class="stat-item" class:urgent={summary.needWatering > 0}>
+					<span class="stat-number">{summary.needWatering}</span>
+					<span class="stat-label">💧 Butuh Disiram</span>
+				</div>
+			</Card>
+			<Card>
+				<div class="stat-item" class:urgent={summary.needFertilizing > 0}>
+					<span class="stat-number">{summary.needFertilizing}</span>
+					<span class="stat-label">🌱 Butuh Dipupuk</span>
+				</div>
+			</Card>
+		</div>
+	{/if}
 
 	<Calendar {namaBulan} days={calendarDays} filledDay={today.getDate()} {getMarkers}>
 		{#snippet legend()}
@@ -263,6 +257,36 @@
 
 	.weather-desc {
 		font-size: 0.75rem;
+		color: var(--color-text-muted);
+	}
+
+	.stat-grid {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 0.5rem;
+		margin-top: 0.75rem;
+	}
+
+	.stat-item {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		text-align: center;
+		gap: 0.125rem;
+	}
+
+	.stat-number {
+		font-size: 1.375rem;
+		font-weight: 700;
+		color: var(--color-primary-dark);
+	}
+
+	.stat-item.urgent .stat-number {
+		color: var(--color-danger-dark);
+	}
+
+	.stat-label {
+		font-size: 0.6875rem;
 		color: var(--color-text-muted);
 	}
 

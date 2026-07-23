@@ -34,7 +34,7 @@
 			icon: '📱',
 			title: 'Akses di Mana Saja',
 			description:
-				'Tabulampot berjalan di browser dan responsif di semua ukuran layar, jadi bisa dibuka langsung dari semua device tanpa perlu install aplikasi.'
+				'Tabulampot berjalan di browser dan responsif di semua ukuran layar, jadi bisa dibuka langsung dimana saja.'
 		}
 	];
 

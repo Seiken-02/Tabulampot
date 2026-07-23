@@ -10,7 +10,7 @@
 	import { getPlantTypes } from '$lib/api/plant-types';
 	import { getPlantById, updatePlant } from '$lib/api/plants';
 	import type { PlantType } from '$lib/types';
-
+	
 	let name = $state('');
 	let plantType = $state('');
 	let plantedAt = $state('');

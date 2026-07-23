@@ -10,8 +10,11 @@
 	import { getPlantById, getPlantHistory, waterPlant, fertilizePlant, deletePlant } from '$lib/api/plants';
 	import { getPlantTypes } from '$lib/api/plant-types';
 	import type { Plant, ActivityLog, PlantType } from '$lib/types';
+	import ConfirmDialog from '$lib/components/ui/confirmDialog.svelte';
+
 
 	let isDeleting = $state(false);
+	let showDeleteConfirm = $state(false);
 
 	let plant = $state<Plant | null>(null);
 	let history = $state<ActivityLog[]>([]);
@@ -146,10 +149,12 @@
 		}
 	}
 
-	async function handleDelete() {
+	function handleDelete() {
+		showDeleteConfirm = true;
+	}
+
+	async function confirmDelete() {
 		if (!plant) return;
-		const yakin = confirm(`Hapus "${plant.nickname}"? Riwayat perawatannya juga akan ikut terhapus.`);
-		if (!yakin) return;
 
 		isDeleting = true;
 		try {
@@ -158,6 +163,7 @@
 		} catch (err) {
 			errorMessage = err instanceof Error ? err.message : 'Gagal menghapus tanaman.';
 			isDeleting = false;
+			showDeleteConfirm = false;
 		}
 	}
 	// Hitung jadwal siram/pupuk berikutnya
@@ -268,7 +274,16 @@
 		</Calendar>
 	{/if}
 </div>
-
+<ConfirmDialog
+	open={showDeleteConfirm}
+	title="Hapus tanaman?"
+	message={plant ? `Hapus "${plant.nickname}"? Riwayat perawatannya juga akan ikut terhapus.` : ''}
+	confirmText="Ya, hapus"
+	danger
+	isLoading={isDeleting}
+	onConfirm={confirmDelete}
+	onCancel={() => (showDeleteConfirm = false)}
+/>
 <style>
 	.page {
 		padding: 1rem;

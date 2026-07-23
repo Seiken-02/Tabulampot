@@ -34,7 +34,7 @@
 <section class="page">
 	<span class="eyebrow">Tentang</span>
 	<h1 class="title">Tabulampot lahir dari kebun kecil di rumah</h1>
-	<p class="subtitle">Cerita di balik aplikasi ini, dan kenapa kami bikinnya.</p>
+	<p class="subtitle">Cerita di balik aplikasi ini.</p>
 
 	<Card>
 		<div class="story">
