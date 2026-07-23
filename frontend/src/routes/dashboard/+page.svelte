@@ -3,9 +3,19 @@
 	import Card from '$lib/components/ui/Card.svelte';
 	import Calendar from '$lib/components/ui/Calender.svelte';
 	import { getDashboardSummary, type DashboardSummary } from '$lib/api/dashboard';
+	import { getPlants, getPlantHistory } from '$lib/api/plants';
 	import { getProfile } from '$lib/api/auth';
+	import type { Plant, ActivityLog } from '$lib/types';
 
+	// summary: 3 angka ringkasan dari /api/dashboard (dihitung di backend)
 	let summary = $state<DashboardSummary | null>(null);
+
+	// historyByPlant: riwayat per tanaman, dipakai untuk kalender & log aktivitas.
+	// Backend /api/dashboard belum menyediakan ini secara gabungan, jadi bagian ini
+	// tetap diambil per tanaman seperti sebelumnya.
+	let plants = $state<Plant[]>([]);
+	let historyByPlant = $state<Record<number, ActivityLog[]>>({});
+
 	let cuaca = $state<{ suhu: number; kondisi: string; icon: string } | null>(null);
 	let userLabel = $state('');
 
@@ -42,12 +52,19 @@
 		errorMessage = '';
 
 		try {
-			const [summaryResult, profile] = await Promise.all([
+			const [summaryResult, plantsResult, profile] = await Promise.all([
 				getDashboardSummary(),
+				getPlants(),
 				getProfile().catch(() => null)
 			]);
 			summary = summaryResult;
+			plants = plantsResult;
 			userLabel = profile?.user.email.split('@')[0] ?? '';
+
+			const histories = await Promise.all(plants.map((p) => getPlantHistory(String(p.id))));
+			const map: Record<number, ActivityLog[]> = {};
+			plants.forEach((p, i) => (map[p.id] = histories[i]));
+			historyByPlant = map;
 		} catch (err) {
 			errorMessage = err instanceof Error ? err.message : 'Gagal memuat dashboard.';
 		} finally {
@@ -55,7 +72,7 @@
 		}
 	}
 
-	// Cuaca real-time via Open-Meteo 
+	// Cuaca real-time via Open-Meteo (gratis, tanpa API key perlu di-setup)
 	// Lokasi: Pamekasan, Madura
 	async function loadWeather() {
 		try {
@@ -92,15 +109,31 @@
 		return '☁️';
 	}
 
-	// Log aktivitas terbaru
+	// Log aktivitas terbaru: gabungan semua riwayat siram/pupuk dari semua tanaman,
+	// urutkan dari yang paling baru terjadi
 	const aktivitasTerbaru = $derived.by(() => {
-		if (!summary) return [];
-		return summary.recentActivity.map((log) => ({
-			id: String(log.id),
-			name: log.plantName,
-			type: log.activityType === 'watering' ? ('siram' as const) : ('pupuk' as const),
-			waktu: formatWaktuRelatif(log.activityDate)
-		}));
+		const items: {
+			id: string;
+			name: string;
+			type: 'siram' | 'pupuk';
+			waktu: string;
+			timestamp: number;
+		}[] = [];
+
+		for (const p of plants) {
+			const logs = historyByPlant[p.id] ?? [];
+			for (const log of logs) {
+				items.push({
+					id: `${log.id}`,
+					name: p.nickname,
+					type: log.activityType === 'watering' ? 'siram' : 'pupuk',
+					waktu: formatWaktuRelatif(log.activityDate),
+					timestamp: new Date(log.activityDate).getTime()
+				});
+			}
+		}
+
+		return items.sort((a, b) => b.timestamp - a.timestamp).slice(0, 8);
 	});
 
 	function formatWaktuRelatif(iso: string): string {
@@ -117,16 +150,18 @@
 		return new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
 	}
 
-	// Titik kalender bulan ini: juga langsung dari backend 
+	// Titik kalender bulan ini diambil dari riwayat siram/pupuk yang beneran tercatat
 	function getMarkers(day: number) {
 		const dots: ('primary' | 'accent')[] = [];
-		if (!summary) return { dots };
 
-		for (const mark of summary.calendarMarks) {
-			const d = new Date(mark.activityDate);
-			if (d.getDate() !== day) continue;
-			if (mark.activityType === 'watering' && !dots.includes('primary')) dots.push('primary');
-			if (mark.activityType === 'fertilizing' && !dots.includes('accent')) dots.push('accent');
+		for (const logs of Object.values(historyByPlant)) {
+			for (const log of logs) {
+				const d = new Date(log.activityDate);
+				if (d.getFullYear() === year && d.getMonth() === month && d.getDate() === day) {
+					if (log.activityType === 'watering' && !dots.includes('primary')) dots.push('primary');
+					if (log.activityType === 'fertilizing' && !dots.includes('accent')) dots.push('accent');
+				}
+			}
 		}
 
 		return { dots };
