@@ -10,4 +10,10 @@ router.get(
   PlantTypeController.getAll
 );
 
+router.post(
+  "/",
+  authenticateToken,
+  PlantTypeController.create
+);
+
 export default router;

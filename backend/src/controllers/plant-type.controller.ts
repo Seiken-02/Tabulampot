@@ -15,4 +15,28 @@ export class PlantTypeController {
 
   }
 
+  static async create(
+    req: Request,
+    res: Response
+  ) {
+
+    const {
+      name,
+      wateringInterval,
+      fertilizingInterval,
+      description,
+    } = req.body;
+
+    const result =
+      await PlantTypeService.create({
+        name,
+        wateringInterval,
+        fertilizingInterval,
+        description,
+      });
+
+    res.status(201).json(result);
+
+  }
+
 }
